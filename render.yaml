@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: roomi-voice-server
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PORT
+        value: 3001
+    healthCheckPath: /health

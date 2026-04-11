@@ -1,0 +1,30 @@
+/* ============================================
+   App-level Styles — Page Transitions
+   ============================================ */
+
+.main-content {
+  transition: opacity 250ms ease-out, transform 250ms ease-out;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.main-content--exit {
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
+}
+
+.main-content--enter {
+  animation: viewEnter 350ms ease-out forwards;
+}
+
+@keyframes viewEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

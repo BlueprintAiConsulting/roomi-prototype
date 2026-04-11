@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.log
+gen_voice_samples.mjs
+smoke_test.mjs
+server/smoke_test.mjs
+server/gen_voice_samples.mjs
+/tmp/
