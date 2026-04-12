@@ -201,7 +201,7 @@ export default function AnchorView() {
 
         {/* Footer note */}
         <div className="anchor-footer-note glass-card">
-          <span className="anchor-footer-icon">🦊</div>
+          <span className="anchor-footer-icon">🦊</span>
           <div>
             <strong>From ROOMI</strong>
             <p>Cassie had a solid day. She ran into something hard — and instead of shutting down, she chose to prepare. That's the kind of growth worth celebrating. 💛</p>
