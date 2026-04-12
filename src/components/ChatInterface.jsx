@@ -4,11 +4,11 @@ import VoiceMode from './VoiceMode.jsx';
 import './ChatInterface.css';
 
 const SCENARIOS = [
-  { id: 'morning', label: '🌅 Morning', name: 'Morning Check-In', icon: '🌅' },
-  { id: 'medication', label: '💊 Meds', name: 'Medication Support', icon: '💊' },
-  { id: 'overwhelm', label: '💙 Support', name: 'A Hard Moment', icon: '💙' },
-  { id: 'schedule', label: '📋 Schedule', name: 'Schedule Review', icon: '📋' },
-  { id: 'reflection', label: '🌙 Reflect', name: 'Evening Reflection', icon: '🌙' },
+  { id: 'morning',    label: '🌅 Morning',  name: 'Morning Check-In',   icon: '🌅', short: 'Morning'  },
+  { id: 'medication', label: '💊 Meds',     name: 'Medication Support', icon: '💊', short: 'Meds'     },
+  { id: 'overwhelm',  label: '💙 Support',  name: 'A Hard Moment',      icon: '💙', short: 'Support'  },
+  { id: 'schedule',   label: '📋 Schedule', name: 'Schedule Review',    icon: '📋', short: 'Schedule' },
+  { id: 'reflection', label: '🌙 Reflect',  name: 'Evening Reflection', icon: '🌙', short: 'Evening'  },
 ];
 
 const QUICK_REPLIES = {
@@ -325,7 +325,7 @@ When stressed: slow down. Breathe first. Offer options. Let them choose.`;
                 title={s.name}
               >
                 <span className="chat-mobile-tab-icon">{s.icon}</span>
-                <span className="chat-mobile-tab-label">{s.name.split(' ')[0]}</span>
+                <span className="chat-mobile-tab-label">{s.short}</span>
               </button>
             ))}
           </div>

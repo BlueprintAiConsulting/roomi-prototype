@@ -16,6 +16,7 @@ export default function Onboarding({ onClose, onComplete }) {
   const isFirst = currentStep === 0;
   const isLast = currentStep === onboardingSteps.length - 1;
   const progress = ((currentStep + 1) / onboardingSteps.length) * 100;
+  const isOptional = step.field && ['wakeTime', 'hasMedications', 'personalFact'].includes(step.field.key);
 
   const handleNext = () => {
     if (isLast) {
@@ -48,6 +49,7 @@ export default function Onboarding({ onClose, onComplete }) {
               placeholder={step.field.placeholder}
               value={formData[step.field.key] || ''}
               onChange={e => updateField(step.field.key, e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleNext()}
               autoFocus
             />
           </div>
@@ -164,17 +166,24 @@ export default function Onboarding({ onClose, onComplete }) {
               Back
             </button>
           )}
-          <button
-            className={`btn ${isLast ? 'btn-primary' : 'btn-teal'} btn-sm onboard-next`}
-            onClick={handleNext}
-          >
-            {isFirst ? "Let's go!" : isLast ? 'Start with ROOMI 🦊' : 'Continue'}
-            {!isLast && (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
+          <div className="onboard-actions-right">
+            {isOptional && (
+              <button className="onboard-skip" onClick={handleNext}>
+                Skip for now
+              </button>
             )}
-          </button>
+            <button
+              className={`btn ${isLast ? 'btn-primary' : 'btn-teal'} btn-sm onboard-next`}
+              onClick={handleNext}
+            >
+              {isFirst ? "Let's go!" : isLast ? 'Start with ROOMI 🦊' : 'Continue'}
+              {!isLast && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
