@@ -26,7 +26,12 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npm run build
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+          VITE_VOICE_WS_URL: ${{ secrets.VITE_VOICE_WS_URL }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
