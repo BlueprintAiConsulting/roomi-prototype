@@ -17,10 +17,9 @@ const MOOD_EMOJI = {
 export default function AnchorView() {
   const data = anchorSummary;
 
-  const renderStars = (count) =>
-    Array.from({ length: 5 }, (_, i) => (
-      <span key={i} className={`star ${i < count ? 'star--filled' : ''}`}>★</span>
-    ));
+  const renderStars = (count) => Array.from({ length: 5 }, (_, i) => (
+    <span key={i} className={`star ${i < count ? 'star--filled' : ''}`}>★</span>
+  ));
 
   const renderMiniChart = (values) => {
     const max = Math.max(...values);
@@ -28,9 +27,9 @@ export default function AnchorView() {
       <div className="mini-chart">
         {values.map((v, i) => (
           <div key={i} className="mini-chart-col">
-            <div
-              className="mini-chart-bar"
-              style={{ height: `${(v / max) * 100}%` }}
+            <div 
+              className="mini-chart-bar" 
+              style={{ height: `${(v / max) * 100}%` }} 
               title={`${data.weekDays[i]}: ${v}/5`}
             />
             <span className="mini-chart-label">{data.weekDays[i]}</span>
@@ -43,19 +42,17 @@ export default function AnchorView() {
   return (
     <div className="anchor-page" id="anchor-page">
       <div className="container">
-
         {/* Header */}
         <div className="anchor-header">
           <div className="anchor-header-left">
-            <div className="anchor-header-icon">🏠</div>
+            <div className="anchor-header-icon">🌠</div>
             <div>
               <h1 className="anchor-header-title">Anchor View</h1>
               <p className="anchor-header-sub">Cassie's day, in her own words · {data.date}</p>
             </div>
           </div>
           <div className="anchor-badge">
-            <span className="anchor-badge-dot" />
-            Today's summary
+            <span className="anchor-badge-dot" /> Today's summary
           </div>
         </div>
 
@@ -63,14 +60,30 @@ export default function AnchorView() {
         <div className="anchor-trust-banner glass-card">
           <span className="anchor-trust-icon">🤝</span>
           <p>
-            This view shows daily highlights — <strong>not transcripts, not live monitoring</strong>.
-            Cassie's private conversations with ROOMI stay private. You see what she's comfortable sharing.
+            This view shows daily highlights — <strong>not transcripts, not live monitoring</strong>. Cassie's private conversations with ROOMI stay private. You see what she's comfortable sharing.
           </p>
+        </div>
+
+        {/* Quick Stats Bar */}
+        <div className="anchor-stats-bar glass-card">
+          <div className="anchor-stat">
+            <span className="anchor-stat-value">{data.routineCompletion.completed}<span className="anchor-stat-denom">/{data.routineCompletion.total}</span></span>
+            <span className="anchor-stat-label">Items done</span>
+          </div>
+          <div className="anchor-stat-divider" />
+          <div className="anchor-stat">
+            <span className="anchor-stat-value anchor-stat-value--amber">{data.overallMood}<span className="anchor-stat-denom">★</span></span>
+            <span className="anchor-stat-label">Mood today</span>
+          </div>
+          <div className="anchor-stat-divider" />
+          <div className="anchor-stat">
+            <span className="anchor-stat-value anchor-stat-value--teal">✅</span>
+            <span className="anchor-stat-label">Meds taken</span>
+          </div>
         </div>
 
         {/* Main Grid */}
         <div className="anchor-grid">
-
           {/* Mood */}
           <div className="anchor-card glass-card anchor-card--mood">
             <div className="anchor-card-header">
@@ -104,19 +117,31 @@ export default function AnchorView() {
           {/* Routine */}
           <div className="anchor-card glass-card anchor-card--routine">
             <div className="anchor-card-header">
-              <h3>Day's Rhythm</h3>
+              <h3>Day’s Rhythm</h3>
               <span className="anchor-card-status anchor-card-status--good">On track</span>
             </div>
-            <div className="anchor-routine-highlights">
-              {data.routineCompletion.highlights.map((h, i) => (
-                <div key={i} className="anchor-routine-highlight">
-                  <span className="anchor-routine-check">✓</span>
-                  {h}
+            <div className="anchor-routine-body">
+              <div className="anchor-progress-ring">
+                <svg viewBox="0 0 36 36" className="anchor-ring-svg">
+                  <path className="anchor-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path 
+                    className="anchor-ring-fill" 
+                    strokeDasharray={`${data.routineCompletion.percentage}, 100`} 
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" 
+                  />
+                </svg>
+                <div className="anchor-ring-label">
+                  <span className="anchor-ring-pct">{data.routineCompletion.percentage}%</span>
+                  <span className="anchor-ring-sub">done</span>
                 </div>
+              </div>
+              <div className="anchor-routine-highlights">
+                {data.routineCompletion.highlights.map((h, i) => (
+                  <div key={i} className="anchor-routine-highlight">
+                    <span className="anchor-routine-check">✓</span> {h}
+                  </div>
               ))}
-            </div>
-            <div className="anchor-mood-note" style={{ marginTop: '12px' }}>
-              She worked through most of her day on her own terms.
+              </div>
             </div>
           </div>
 
@@ -134,16 +159,14 @@ export default function AnchorView() {
                   </div>
                   <div className="anchor-timeline-content">
                     <div className="anchor-timeline-time">
-                      {MOOD_EMOJI[info.mood] || '⚪'} {MOOD_LABELS[time] || time}
+                      {MOOD_EMOJI[info.mood] || '⚪️'} {MOOD_LABELS[time] || time}
                     </div>
                     <div className="anchor-timeline-note">{info.note}</div>
                   </div>
-                </div>
-              ))}
+              </div>
+            ))}
             </div>
           </div>
-
-
 
           {/* Notes / Flags */}
           <div className="anchor-card glass-card anchor-card--flags">
@@ -160,17 +183,30 @@ export default function AnchorView() {
               ))}
             </div>
           </div>
+
+          {/* Weekly Trend */}
+          <div className="anchor-card glass-card anchor-card--trend">
+            <div className="anchor-card-header">
+              <h3>This Week</h3>
+              <span className="anchor-card-status anchor-card-status--good">Trending up</span>
+            </div>
+            <div className="anchor-trend-chart">
+              {renderMiniChart(data.weeklyTrend)}
+            </div>
+            <div className="anchor-mood-note" style={{ marginTop: '8px' }}>
+              Mood across the past 7 days, in her own words
+            </div>
+          </div>
         </div>
 
         {/* Footer note */}
         <div className="anchor-footer-note glass-card">
-          <span className="anchor-footer-icon">🦊</span>
+          <span className="anchor-footer-icon">🦊</div>
           <div>
             <strong>From ROOMI</strong>
             <p>Cassie had a solid day. She ran into something hard — and instead of shutting down, she chose to prepare. That's the kind of growth worth celebrating. 💛</p>
           </div>
         </div>
-
       </div>
     </div>
   );
