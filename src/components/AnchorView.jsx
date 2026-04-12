@@ -68,6 +68,24 @@ export default function AnchorView() {
           </p>
         </div>
 
+        {/* Quick Stats Bar */}
+        <div className="anchor-stats-bar glass-card">
+          <div className="anchor-stat">
+            <span className="anchor-stat-value">{data.routineCompletion.completed}<span className="anchor-stat-denom">/{data.routineCompletion.total}</span></span>
+            <span className="anchor-stat-label">Items done</span>
+          </div>
+          <div className="anchor-stat-divider" />
+          <div className="anchor-stat">
+            <span className="anchor-stat-value anchor-stat-value--amber">{data.overallMood}<span className="anchor-stat-denom">★</span></span>
+            <span className="anchor-stat-label">Mood today</span>
+          </div>
+          <div className="anchor-stat-divider" />
+          <div className="anchor-stat">
+            <span className="anchor-stat-value anchor-stat-value--teal">✅</span>
+            <span className="anchor-stat-label">Meds taken</span>
+          </div>
+        </div>
+
         {/* Main Grid */}
         <div className="anchor-grid">
 
@@ -104,19 +122,32 @@ export default function AnchorView() {
           {/* Routine */}
           <div className="anchor-card glass-card anchor-card--routine">
             <div className="anchor-card-header">
-              <h3>Day's Rhythm</h3>
+              <h3>Day’s Rhythm</h3>
               <span className="anchor-card-status anchor-card-status--good">On track</span>
             </div>
-            <div className="anchor-routine-highlights">
-              {data.routineCompletion.highlights.map((h, i) => (
-                <div key={i} className="anchor-routine-highlight">
-                  <span className="anchor-routine-check">✓</span>
-                  {h}
+            <div className="anchor-routine-body">
+              <div className="anchor-progress-ring">
+                <svg viewBox="0 0 36 36" className="anchor-ring-svg">
+                  <path className="anchor-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                  <path
+                    className="anchor-ring-fill"
+                    strokeDasharray={`${data.routineCompletion.percentage}, 100`}
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                </svg>
+                <div className="anchor-ring-label">
+                  <span className="anchor-ring-pct">{data.routineCompletion.percentage}%</span>
+                  <span className="anchor-ring-sub">done</span>
                 </div>
-              ))}
-            </div>
-            <div className="anchor-mood-note" style={{ marginTop: '12px' }}>
-              She worked through most of her day on her own terms.
+              </div>
+              <div className="anchor-routine-highlights">
+                {data.routineCompletion.highlights.map((h, i) => (
+                  <div key={i} className="anchor-routine-highlight">
+                    <span className="anchor-routine-check">✓</span>
+                    {h}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -158,6 +189,20 @@ export default function AnchorView() {
                   <p className="anchor-flag-text">{flag.text}</p>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Weekly Trend */}
+          <div className="anchor-card glass-card anchor-card--trend">
+            <div className="anchor-card-header">
+              <h3>This Week</h3>
+              <span className="anchor-card-status anchor-card-status--good">Trending up</span>
+            </div>
+            <div className="anchor-trend-chart">
+              {renderMiniChart(data.weeklyTrend)}
+            </div>
+            <div className="anchor-mood-note" style={{ marginTop: '8px' }}>
+              Mood across the past 7 days, in her own words
             </div>
           </div>
         </div>

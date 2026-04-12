@@ -585,3 +585,132 @@
   }
 }
 
+
+/* ============================================
+   Quick Stats Bar
+   ============================================ */
+.anchor-stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: var(--space-lg) var(--space-xl);
+  margin-bottom: var(--space-xl);
+  gap: var(--space-lg);
+}
+.anchor-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.anchor-stat-value {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.anchor-stat-value--amber { color: var(--amber-primary); }
+.anchor-stat-value--teal  { color: var(--teal-accent); }
+.anchor-stat-denom {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  opacity: 0.55;
+}
+.anchor-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.anchor-stat-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Circular Progress Ring (SVG)
+   ============================================ */
+.anchor-routine-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+}
+.anchor-progress-ring {
+  position: relative;
+  width: 86px;
+  height: 86px;
+  flex-shrink: 0;
+}
+.anchor-ring-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.anchor-ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 3.5;
+}
+.anchor-ring-fill {
+  fill: none;
+  stroke: var(--amber-primary);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(255, 179, 0, 0.35));
+}
+.anchor-ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+.anchor-ring-pct {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--amber-primary);
+  line-height: 1;
+}
+.anchor-ring-sub {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ============================================
+   Weekly Trend Chart
+   ============================================ */
+.anchor-trend-chart {
+  padding: var(--space-sm) 0;
+}
+.mini-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 64px;
+}
+.mini-chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+}
+.mini-chart-bar {
+  width: 100%;
+  min-height: 6px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, var(--amber-primary) 0%, rgba(255,179,0,0.25) 100%);
+}
+.mini-chart-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}

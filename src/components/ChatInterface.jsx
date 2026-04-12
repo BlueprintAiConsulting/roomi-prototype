@@ -11,6 +11,14 @@ const SCENARIOS = [
   { id: 'reflection', label: '🌙 Reflect', name: 'Evening Reflection', icon: '🌙' },
 ];
 
+const QUICK_REPLIES = {
+  morning:    ['Good morning! 🌅', "I'm ready", 'Give me a few minutes'],
+  medication: ['Done! 💊', 'Not yet', 'What do I need to take?'],
+  overwhelm:  ['I need a moment', "Let's prep together", "I'm okay now"],
+  schedule:   ["What's left today?", "I'm on track", 'Can we adjust something?'],
+  reflection: ['It was a good day', 'Pretty tough today', "I'd say a 4"],
+};
+
 // Generate a soft notification sound using Web Audio API
 function playNotificationSound() {
   try {
@@ -298,17 +306,11 @@ When stressed: slow down. Breathe first. Offer options. Let them choose.`;
               </div>
             </div>
             <div className="chat-header-right">
-              <button
-                className={`chat-voice-btn ${voiceMode ? 'chat-voice-btn--active' : ''}`}
-                onClick={() => setVoiceMode(v => !v)}
-                title={voiceMode ? 'Exit voice mode' : 'Switch to voice'}
-                aria-label={voiceMode ? 'Exit voice mode' : 'Switch to voice mode'}
-              >
-                🎙️
-              </button>
               <div className="chat-header-status">
-                <span className="chat-status-dot" />
-                {voiceMode ? 'Voice' : 'Active'}
+                {isTyping
+                  ? <><span className="chat-status-dot chat-status-dot--thinking" />Thinking…</>
+                  : <><span className="chat-status-dot" />Active</>
+                }
               </div>
             </div>
           </div>
@@ -413,11 +415,28 @@ When stressed: slow down. Breathe first. Offer options. Let them choose.`;
           </div>
 
           <div className="chat-input-area">
+            {/* Quick Reply Chips */}
+            {!isTyping && messages.length > 0 && (
+              <div className="chat-quick-replies">
+                {(QUICK_REPLIES[activeScenario] || []).map((reply, i) => (
+                  <button
+                    key={i}
+                    className="chat-quick-reply"
+                    onClick={() => {
+                      setInputValue(reply);
+                      setTimeout(() => handleSendDemo(), 50);
+                    }}
+                  >
+                    {reply}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="chat-input-wrapper">
               <input
                 type="text"
                 className="chat-input"
-                placeholder="Type a message to ROOMI..."
+                placeholder="Type a message to ROOMI…"
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendDemo()}
@@ -425,7 +444,7 @@ When stressed: slow down. Breathe first. Offer options. Let them choose.`;
               <button
                 className="chat-send-btn"
                 onClick={handleSendDemo}
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isTyping}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13" />
@@ -434,7 +453,7 @@ When stressed: slow down. Breathe first. Offer options. Let them choose.`;
               </button>
             </div>
             <div className="chat-input-hint">
-              Type a message or choose a moment from the sidebar
+              Tap a suggestion or type your own message
             </div>
           </div>
         </div>
