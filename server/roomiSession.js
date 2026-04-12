@@ -35,8 +35,6 @@ export async function createRoomiSession(ws, voiceName) {
     httpOptions: { apiVersion: 'v1alpha' },
   });
 
-  let audioScheduleTime = 0;
-
   const session = await ai.live.connect({
     model: 'gemini-3.1-flash-live-preview',
     config: {
@@ -51,6 +49,15 @@ export async function createRoomiSession(ws, voiceName) {
     callbacks: {
       onopen: () => {
         console.log(`[gemini] Live session open — voice: ${voiceName}`);
+        // Send initial greeting so user hears ROOMI immediately
+        try {
+          session.sendClientContent({
+            turns: [{ role: 'user', parts: [{ text: 'Hi' }] }],
+            turnComplete: true,
+          });
+        } catch (e) {
+          console.warn('[gemini] Could not send initial greeting:', e.message);
+        }
       },
 
       onmessage: (msg) => {
@@ -79,17 +86,23 @@ export async function createRoomiSession(ws, voiceName) {
         if (ws.readyState === 1) {
           ws.send(JSON.stringify({
             type: 'error',
-            message: 'Something went wrong. Want to try again?',
+            message: 'ROOMI ran into an issue. Tap to try again.',
           }));
         }
       },
 
       onclose: (event) => {
         console.log(`[gemini] Session closed — code: ${event?.code}, reason: ${event?.reason || 'none'}`);
+        // Notify browser so it doesn't stay stuck in "listening"
+        if (ws.readyState === 1) {
+          ws.send(JSON.stringify({
+            type: 'error',
+            message: 'Voice session ended. Tap to start again.',
+          }));
+        }
       },
     },
   });
-
 
   return session;
 }

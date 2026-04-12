@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createWorkletBlob } from '../micWorklet.js';
 import './VoiceMode.css';
+
 
 const VOICE_OPTIONS = [
   { id: 'Aoede', label: 'Aoede', desc: 'Warm · Clear' },
@@ -18,10 +20,11 @@ export default function VoiceMode({ onExit, userName }) {
   const wsRef = useRef(null);
   const audioContextRef = useRef(null);
   const micStreamRef = useRef(null);
-  const processorRef = useRef(null);
+  const workletNodeRef = useRef(null);
   const sourceRef = useRef(null);
   const nextPlayTimeRef = useRef(0);
   const transcriptEndRef = useRef(null);
+  const workletBlobUrlRef = useRef(null);
 
   // Auto-scroll transcript
   useEffect(() => {
@@ -29,11 +32,21 @@ export default function VoiceMode({ onExit, userName }) {
   }, [transcript]);
 
   const stopMic = useCallback(() => {
-    if (processorRef.current) { try { processorRef.current.disconnect(); } catch (_) {} processorRef.current = null; }
-    if (sourceRef.current)    { try { sourceRef.current.disconnect(); }    catch (_) {} sourceRef.current = null; }
+    if (workletNodeRef.current) {
+      try { workletNodeRef.current.disconnect(); } catch (_) {}
+      workletNodeRef.current = null;
+    }
+    if (sourceRef.current) {
+      try { sourceRef.current.disconnect(); } catch (_) {}
+      sourceRef.current = null;
+    }
     if (micStreamRef.current) {
       micStreamRef.current.getTracks().forEach(t => t.stop());
       micStreamRef.current = null;
+    }
+    if (workletBlobUrlRef.current) {
+      URL.revokeObjectURL(workletBlobUrlRef.current);
+      workletBlobUrlRef.current = null;
     }
   }, []);
 
@@ -104,38 +117,50 @@ export default function VoiceMode({ onExit, userName }) {
 
       if (msg.type === 'ready') {
         setStatus('listening');
-        // Start mic capture
+        // Start mic capture via AudioWorklet (more reliable than ScriptProcessor)
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             audio: {
               channelCount: 1,
               echoCancellation: true,
               noiseSuppression: true,
-              sampleRate: 16000,
             },
           });
           micStreamRef.current = stream;
 
-          const ctx = audioContextRef.current;
-          const micCtx = new AudioContext({ sampleRate: 16000 });
-          const source = micCtx.createMediaStreamSource(stream);
-          const processor = micCtx.createScriptProcessor(2048, 1, 1);
+          const micCtx = new AudioContext();              // native rate (48000 in Chrome)
+          const actualRate = micCtx.sampleRate;
+          const blobUrl = createWorkletBlob();
+          workletBlobUrlRef.current = blobUrl;
 
-          processor.onaudioprocess = (e) => {
+          await micCtx.audioWorklet.addModule(blobUrl);
+
+          const source = micCtx.createMediaStreamSource(stream);
+          const workletNode = new AudioWorkletNode(micCtx, 'mic-capture');
+
+          workletNode.port.onmessage = (e) => {
             if (ws.readyState !== 1) return;
-            const float32 = e.inputBuffer.getChannelData(0);
-            const int16 = new Int16Array(float32.length);
-            for (let i = 0; i < float32.length; i++) {
-              int16[i] = Math.max(-32768, Math.min(32767, float32[i] * 32768));
+            // Resample from native rate to 16000 if needed
+            const int16In = new Int16Array(e.data);
+            if (actualRate === 16000) {
+              ws.send(int16In.buffer);
+            } else {
+              // Simple linear downsample
+              const ratio = actualRate / 16000;
+              const outLen = Math.floor(int16In.length / ratio);
+              const out = new Int16Array(outLen);
+              for (let i = 0; i < outLen; i++) {
+                out[i] = int16In[Math.floor(i * ratio)];
+              }
+              ws.send(out.buffer);
             }
-            ws.send(int16.buffer);
           };
 
-          source.connect(processor);
-          processor.connect(micCtx.destination);
+          source.connect(workletNode);
+          workletNode.connect(micCtx.destination);
 
           sourceRef.current = source;
-          processorRef.current = processor;
+          workletNodeRef.current = workletNode;
         } catch (err) {
           setErrorMsg('Microphone access denied. Please allow mic access and try again.');
           setStatus('error');
@@ -154,6 +179,7 @@ export default function VoiceMode({ onExit, userName }) {
       if (msg.type === 'error') {
         setErrorMsg(msg.message);
         setStatus('error');
+        endSession();
       }
     };
 
