@@ -5,7 +5,7 @@
   gap: 20px;
   padding: 24px 20px 32px;
   min-height: 100%;
-  background: var(--bg-deep);
+  background: var(--bg-primary);
 }
 
 /* Header */
@@ -87,7 +87,7 @@
 }
 
 .voice-option--active {
-  border-color: var(--amber);
+  border-color: var(--amber-primary);
   background: rgba(255, 179, 0, 0.12);
 }
 
@@ -117,7 +117,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--amber);
+  background: var(--amber-primary);
   animation: pulse-dot 1.5s ease-in-out infinite;
 }
 
@@ -214,7 +214,7 @@
 .voice-waveform-bar {
   width: 4px;
   border-radius: 3px;
-  background: var(--teal);
+  background: var(--teal-accent);
   animation: wave-bar 0.8s ease-in-out infinite alternate;
   min-height: 6px;
 }
@@ -234,9 +234,9 @@
   transition: color 0.3s ease;
 }
 
-.voice-status-label--listening { color: var(--amber); }
-.voice-status-label--speaking  { color: var(--teal);  }
-.voice-status-label--error     { color: #ff6450;      }
+.voice-status-label--listening { color: var(--amber-primary); }
+.voice-status-label--speaking  { color: var(--teal-accent);   }
+.voice-status-label--error     { color: #ff6450;              }
 
 /* Start / end buttons */
 .voice-start-btn {
