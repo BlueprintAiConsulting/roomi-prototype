@@ -11,21 +11,29 @@ const SCENARIOS = [
   { id: 'reflection', label: '🌙 Reflect', name: 'Evening Reflection', icon: '🌙' },
 ];
 
+const QUICK_REPLIES = {
+  morning: ['Good morning! 🌅', "I'm ready", 'Give me a few minutes'],
+  medication: ['Done! 💊', 'Not yet', 'What do I need to take?'],
+  overwhelm: ['I need a moment', "Let's prep together", "I'm okay now"],
+  schedule: ["What's left today?", "I'm on track", 'Can we adjust something?'],
+  reflection: ['It was a good day', 'Pretty tough today', "I'd say a 4"],
+};
+
 // Generate a soft notification sound using Web Audio API
 function playNotificationSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
-
+    
     oscillator.connect(gainNode);
     gainNode.connect(ctx.destination);
 
     // Warm, soft two-tone chime
     oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(587, ctx.currentTime);       // D5
+    oscillator.frequency.setValueAtTime(587, ctx.currentTime); // D5
     oscillator.frequency.setValueAtTime(784, ctx.currentTime + 0.1); // G5
-
+    
     gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
 
@@ -46,8 +54,10 @@ export default function ChatInterface({ userData }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
   const [scheduleItems, setScheduleItems] = useState(dailySchedule.map(item => ({ ...item })));
+  
   const messagesEndRef = useRef(null);
   const chatBodyRef = useRef(null);
+  const conversationHistoryRef = useRef([]); // keeps context across messages
 
   // Determine display name from onboarding data or fallback to default
   const userName = userData?.preferredName || userProfile.preferredName || 'Cass';
@@ -69,6 +79,7 @@ export default function ChatInterface({ userData }) {
     setDisplayedCount(0);
     setIsTyping(false);
     setShowSchedule(false);
+    conversationHistoryRef.current = []; // clear history between scenarios
   }, [activeScenario]);
 
   // Reset schedule items
@@ -92,7 +103,7 @@ export default function ChatInterface({ userData }) {
       const personalizedMsg = {
         ...nextMsg,
         text: personalizeText(nextMsg.text),
-        id: displayedCount,
+        id: displayedCount
       };
       setMessages(prev => [...prev, personalizedMsg]);
       setDisplayedCount(prev => prev + 1);
@@ -113,13 +124,15 @@ export default function ChatInterface({ userData }) {
         setDisplayedCount(0);
         const firstMsg = currentConversation[0];
         setIsTyping(firstMsg.sender === 'roomi');
+        
         const delay = firstMsg.sender === 'roomi' ? 800 : 400;
+        
         setTimeout(() => {
           setIsTyping(false);
-          setMessages([{
-            ...firstMsg,
+          setMessages([{ 
+            ...firstMsg, 
             text: personalizeText(firstMsg.text),
-            id: 0,
+            id: 0 
           }]);
           setDisplayedCount(1);
           if (firstMsg.sender === 'roomi') {
@@ -128,6 +141,7 @@ export default function ChatInterface({ userData }) {
         }, delay);
       }
     }, 500);
+    
     return () => clearTimeout(timer);
   }, [activeScenario]);
 
@@ -136,25 +150,56 @@ export default function ChatInterface({ userData }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const handleSendDemo = () => {
+  const ROOMI_SYSTEM_PROMPT = `You are ROOMI — a daily companion for people with intellectual and developmental differences. \nYour voice: warm, direct, patient, specific. Max 2 short sentences. \nSound like someone who knows this person, not an assistant.\nYou know:\n- User's name is ${userName}. They may call themselves by a nickname.\n- They have a cat.\n- They like drawing.\nYou support them through: morning routine, medications, hard moments, schedule questions, evening reflection. \nNever lecture. Never track or report. Never more than 2 sentences.\nWhen stressed: slow down. Breathe first. Offer options. Let them choose.`;
+
+  const handleSendDemo = async () => {
     if (!inputValue.trim()) return;
-    setMessages(prev => [...prev, { sender: 'user', text: inputValue, id: Date.now() }]);
+
+    const userText = inputValue.trim();
     setInputValue('');
 
+    // Add user message to UI and history
+    setMessages(prev => [...prev, { sender: 'user', text: userText, id: Date.now() }]);
+    conversationHistoryRef.current.push({ role: 'user', parts: [{ text: userText }] });
+
     setIsTyping(true);
-    setTimeout(() => {
+
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+      const body = {
+        system_instruction: { parts: [{ text: ROOMI_SYSTEM_PROMPT }] },
+        contents: conversationHistoryRef.current,
+        generationConfig: {
+          temperature: 0.85,
+          maxOutputTokens: 120,
+        }
+      };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      const roomiText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || `I'm here, ${userName}. What do you need right now?`;
+
+      // Add ROOMI response to history
+      conversationHistoryRef.current.push({ role: 'model', parts: [{ text: roomiText }] });
+
       setIsTyping(false);
-      const responses = [
-        `I hear you, ${userName}. Thanks for sharing that with me. 💛`,
-        `That makes sense. What feels like the right next step for you?`,
-        `Okay. I'm with you — what do you need right now?`,
-        `Good to know. Want to keep going, or take a beat?`,
-        `Noted. What else is on your mind?`,
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      setMessages(prev => [...prev, { sender: 'roomi', text: randomResponse, id: Date.now() + 1 }]);
+      setMessages(prev => [...prev, { sender: 'roomi', text: roomiText, id: Date.now() + 1 }]);
       playNotificationSound();
-    }, 1500);
+
+    } catch (err) {
+      setIsTyping(false);
+      const fallback = `I'm here, ${userName}. What's on your mind?`;
+      conversationHistoryRef.current.push({ role: 'model', parts: [{ text: fallback }] });
+      setMessages(prev => [...prev, { sender: 'roomi', text: fallback, id: Date.now() + 1 }]);
+      playNotificationSound();
+    }
   };
 
   const handleScenarioSelect = (id) => {
@@ -163,7 +208,7 @@ export default function ChatInterface({ userData }) {
   };
 
   const toggleScheduleItem = (index) => {
-    setScheduleItems(prev => prev.map((item, i) =>
+    setScheduleItems(prev => prev.map((item, i) => 
       i === index ? { ...item, done: !item.done } : item
     ));
   };
@@ -187,7 +232,11 @@ export default function ChatInterface({ userData }) {
               <div className="chat-sidebar-title">ROOMI</div>
               <div className="chat-sidebar-sub">Chatting with {fullName}</div>
             </div>
-            <button className="chat-sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar">
+            <button 
+              className="chat-sidebar-close" 
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Close sidebar"
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
@@ -197,8 +246,8 @@ export default function ChatInterface({ userData }) {
           <div className="chat-sidebar-section-label">CONVERSATIONS</div>
           <div className="scenario-list">
             {SCENARIOS.map(s => (
-              <button
-                key={s.id}
+              <button 
+                key={s.id} 
                 className={`scenario-btn ${activeScenario === s.id ? 'scenario-btn--active' : ''}`}
                 onClick={() => handleScenarioSelect(s.id)}
               >
@@ -217,7 +266,7 @@ export default function ChatInterface({ userData }) {
               📋 Today's Schedule
             </button>
             <button className="quick-action-btn" onClick={() => handleScenarioSelect('overwhelm')}>
-              🫁 I need a moment
+              🬁 I need a moment
             </button>
           </div>
 
@@ -234,9 +283,13 @@ export default function ChatInterface({ userData }) {
         <div className="chat-main">
           <div className="chat-header">
             <div className="chat-header-left">
-              <button className="chat-mobile-menu-btn" onClick={() => setSidebarOpen(true)} aria-label="Open scenarios">
+              <button 
+                className="chat-mobile-menu-btn" 
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open scenarios"
+              >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
                 </svg>
               </button>
               <div className="chat-header-fox">🦊</div>
@@ -247,18 +300,13 @@ export default function ChatInterface({ userData }) {
                 </div>
               </div>
             </div>
+            
             <div className="chat-header-right">
-              <button
-                className={`chat-voice-btn ${voiceMode ? 'chat-voice-btn--active' : ''}`}
-                onClick={() => setVoiceMode(v => !v)}
-                title={voiceMode ? 'Exit voice mode' : 'Switch to voice'}
-                aria-label={voiceMode ? 'Exit voice mode' : 'Switch to voice mode'}
-              >
-                🎙️
-              </button>
               <div className="chat-header-status">
-                <span className="chat-status-dot" />
-                {voiceMode ? 'Voice' : 'Active'}
+                {isTyping ? 
+                  <><span className="chat-status-dot chat-status-dot--thinking" />Thinking…</> :
+                  <><span className="chat-status-dot" />Active</>
+                }
               </div>
             </div>
           </div>
@@ -266,8 +314,8 @@ export default function ChatInterface({ userData }) {
           {/* Mobile scenario tabs */}
           <div className="chat-mobile-tabs">
             {SCENARIOS.map(s => (
-              <button
-                key={s.id}
+              <button 
+                key={s.id} 
                 className={`chat-mobile-tab ${activeScenario === s.id ? 'chat-mobile-tab--active' : ''}`}
                 onClick={() => setActiveScenario(s.id)}
                 title={s.name}
@@ -281,10 +329,7 @@ export default function ChatInterface({ userData }) {
           {/* Voice Mode overlay */}
           {voiceMode && (
             <div className="voice-mode-overlay">
-              <VoiceMode
-                onExit={() => setVoiceMode(false)}
-                userName={fullName}
-              />
+              <VoiceMode onExit={() => setVoiceMode(false)} userName={fullName} />
             </div>
           )}
 
@@ -302,8 +347,8 @@ export default function ChatInterface({ userData }) {
                 </div>
                 <div className="schedule-list">
                   {scheduleItems.map((item, i) => (
-                    <button
-                      key={i}
+                    <button 
+                      key={i} 
                       className={`schedule-item ${item.done ? 'schedule-item--done' : ''}`}
                       onClick={() => toggleScheduleItem(i)}
                     >
@@ -313,7 +358,7 @@ export default function ChatInterface({ userData }) {
                     </button>
                   ))}
                 </div>
-              </div>
+            </div>
             </div>
           )}
 
@@ -323,8 +368,8 @@ export default function ChatInterface({ userData }) {
             </div>
 
             {messages.map((msg) => (
-              <div
-                key={msg.id}
+              <div 
+                key={msg.id} 
                 className={`chat-msg chat-msg--${msg.sender}`}
                 style={{ animation: 'fadeInUp 0.3s ease-out' }}
               >
@@ -353,38 +398,55 @@ export default function ChatInterface({ userData }) {
                       <span />
                       <span />
                       <span />
-                    </div>
+                   </div>
                   </div>
                 </div>
-              </div>
+            </div>
             )}
-
             <div ref={messagesEndRef} />
           </div>
 
           <div className="chat-input-area">
+            {/* Quick Reply Chips */}
+            {!isTyping && messages.length > 0 && (
+              <div className="chat-quick-replies">
+                {(QUICK_REPLIES[activeScenario] || []).map((reply, i) => (
+                  <button 
+                    key={i} 
+                    className="chat-quick-reply"
+                    onClick={() => {
+                      setInputValue(reply);
+                      setTimeout(() => handleSendDemo(), 50);
+                    }}
+                >
+                  {reply}
+                </button>
+              ))}
+              </div>
+            )}
+
             <div className="chat-input-wrapper">
-              <input
-                type="text"
-                className="chat-input"
-                placeholder="Type a message to ROOMI..."
+              <input 
+                type="text" 
+                className="chat-input" 
+                placeholder="Type a message to ROOMI…"
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendDemo()}
               />
-              <button
+              <button 
                 className="chat-send-btn"
                 onClick={handleSendDemo}
-                disabled={!inputValue.trim()}
+                disabled={!inputValue.trim() || isTyping}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
               </button>
             </div>
             <div className="chat-input-hint">
-              Type a message or choose a moment from the sidebar
+              Tap a suggestion or type your own message
             </div>
           </div>
         </div>
