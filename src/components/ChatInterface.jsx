@@ -48,6 +48,7 @@ export default function ChatInterface({ userData }) {
   const [scheduleItems, setScheduleItems] = useState(dailySchedule.map(item => ({ ...item })));
   const messagesEndRef = useRef(null);
   const chatBodyRef = useRef(null);
+  const conversationHistoryRef = useRef([]); // keeps context across messages
 
   // Determine display name from onboarding data or fallback to default
   const userName = userData?.preferredName || userProfile.preferredName || 'Cass';
@@ -69,6 +70,7 @@ export default function ChatInterface({ userData }) {
     setDisplayedCount(0);
     setIsTyping(false);
     setShowSchedule(false);
+    conversationHistoryRef.current = []; // clear history between scenarios
   }, [activeScenario]);
 
   // Reset schedule items
@@ -136,25 +138,73 @@ export default function ChatInterface({ userData }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  const handleSendDemo = () => {
+  const ROOMI_SYSTEM_PROMPT = `You are ROOMI — a daily companion for people with intellectual and developmental differences.
+
+Your voice: warm, direct, patient, specific. Max 2 short sentences. Sound like someone who knows this person, not an assistant.
+
+You know:
+- User's name is ${userName}. They may call themselves by a nickname.
+- They have a cat.
+- They like drawing.
+
+You support them through: morning routine, medications, hard moments, schedule questions, evening reflection.
+
+Never lecture. Never track or report. Never more than 2 sentences.
+When stressed: slow down. Breathe first. Offer options. Let them choose.`;
+
+  const handleSendDemo = async () => {
     if (!inputValue.trim()) return;
-    setMessages(prev => [...prev, { sender: 'user', text: inputValue, id: Date.now() }]);
+    const userText = inputValue.trim();
     setInputValue('');
 
+    // Add user message to UI and history
+    setMessages(prev => [...prev, { sender: 'user', text: userText, id: Date.now() }]);
+    conversationHistoryRef.current.push({
+      role: 'user',
+      parts: [{ text: userText }],
+    });
+
     setIsTyping(true);
-    setTimeout(() => {
+
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+      const body = {
+        system_instruction: { parts: [{ text: ROOMI_SYSTEM_PROMPT }] },
+        contents: conversationHistoryRef.current,
+        generationConfig: {
+          temperature: 0.85,
+          maxOutputTokens: 120,
+        },
+      };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      const roomiText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+        || `I'm here, ${userName}. What do you need right now?`;
+
+      // Add ROOMI response to history
+      conversationHistoryRef.current.push({
+        role: 'model',
+        parts: [{ text: roomiText }],
+      });
+
       setIsTyping(false);
-      const responses = [
-        `I hear you, ${userName}. Thanks for sharing that with me. 💛`,
-        `That makes sense. What feels like the right next step for you?`,
-        `Okay. I'm with you — what do you need right now?`,
-        `Good to know. Want to keep going, or take a beat?`,
-        `Noted. What else is on your mind?`,
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      setMessages(prev => [...prev, { sender: 'roomi', text: randomResponse, id: Date.now() + 1 }]);
+      setMessages(prev => [...prev, { sender: 'roomi', text: roomiText, id: Date.now() + 1 }]);
       playNotificationSound();
-    }, 1500);
+    } catch (err) {
+      setIsTyping(false);
+      const fallback = `I'm here, ${userName}. What's on your mind?`;
+      conversationHistoryRef.current.push({ role: 'model', parts: [{ text: fallback }] });
+      setMessages(prev => [...prev, { sender: 'roomi', text: fallback, id: Date.now() + 1 }]);
+      playNotificationSound();
+    }
   };
 
   const handleScenarioSelect = (id) => {

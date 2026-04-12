@@ -229,7 +229,7 @@
   padding: var(--space-md) var(--space-lg);
   border-bottom: 1px solid var(--border-subtle);
   background: rgba(15, 15, 26, 0.8);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
 }
 
 .chat-header-left {
@@ -537,7 +537,7 @@
   padding: var(--space-md) var(--space-lg) var(--space-lg);
   border-top: 1px solid var(--border-subtle);
   background: rgba(15, 15, 26, 0.5);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(6px);
 }
 
 .chat-input-wrapper {
