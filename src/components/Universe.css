@@ -2,9 +2,13 @@
 
 .universe-page {
   position: fixed;
-  inset: 0;
-  top: 56px; /* below navbar */
-  z-index: 1;
+  top: 56px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: calc(100vh - 56px);
+  z-index: 10;
   background: #010206;
 }
 
@@ -20,5 +24,6 @@
 @media (max-width: 520px) {
   .universe-page {
     top: 48px;
+    height: calc(100vh - 48px);
   }
 }
