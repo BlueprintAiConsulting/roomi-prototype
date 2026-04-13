@@ -33,7 +33,7 @@ export default function Landing({ onNavigate, onOpenOnboarding }) {
           <div className="hero-fox-container reveal">
             <div className="hero-fox">
               <div className="hero-fox-glow" />
-              <img src="/roomi-logo-wide.png" alt="ROOMI" className="hero-fox-logo" />
+              <img src={`${import.meta.env.BASE_URL}roomi-logo-wide.png`} alt="ROOMI" className="hero-fox-logo" />
             </div>
           </div>
 
@@ -260,7 +260,7 @@ export default function Landing({ onNavigate, onOpenOnboarding }) {
         <div className="container">
           <div className="cta-card reveal">
             <div className="cta-glow" />
-            <img src="/roomi-logo-wide.png" alt="ROOMI" className="cta-fox-img" />
+            <img src={`${import.meta.env.BASE_URL}roomi-logo-wide.png`} alt="ROOMI" className="cta-fox-img" />
             <h2>Ready when you are.</h2>
             <p>ROOMI doesn't rush. It doesn't push. It shows up every morning, remembers what matters to you, and gets a little better at being yours over time.</p>
             <div className="cta-actions">
@@ -279,7 +279,7 @@ export default function Landing({ onNavigate, onOpenOnboarding }) {
       <footer className="footer">
         <div className="container footer-inner">
           <div className="footer-brand">
-            <img src="/roomi-logo-wide.png" alt="ROOMI" className="footer-logo" />
+            <img src={`${import.meta.env.BASE_URL}roomi-logo-wide.png`} alt="ROOMI" className="footer-logo" />
           </div>
           <div className="footer-tagline-row">
             Companion. Co-pilot. Partner.
