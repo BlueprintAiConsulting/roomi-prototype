@@ -12,7 +12,7 @@ export default function Onboarding({ onClose, onComplete }) {
   });
   const [direction, setDirection] = useState('forward');
 
-  const step = onboardingSteps[currentStep];
+ const step = onboardingSteps[currentStep];
   const isFirst = currentStep === 0;
   const isLast = currentStep === onboardingSteps.length - 1;
   const progress = ((currentStep + 1) / onboardingSteps.length) * 100;
@@ -150,7 +150,7 @@ export default function Onboarding({ onClose, onComplete }) {
               </div>
             )}
           </div>
-          );}
+          )}
         </div>
 
         <div className="onboard-actions">
