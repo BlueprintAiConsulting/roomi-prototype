@@ -4,6 +4,7 @@ import Landing from './components/Landing.jsx';
 import ChatInterface from './components/ChatInterface.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import AnchorView from './components/AnchorView.jsx';
+import Universe from './components/Universe.jsx';
 import './App.css';
 
 export default function App() {
@@ -51,6 +52,8 @@ export default function App() {
         return <ChatInterface userData={userData} />;
       case 'anchor':
         return <AnchorView />;
+      case 'universe':
+        return <Universe />;
       case 'landing':
       default:
         return (

@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROOMI Universe</title>
+  <meta name="description" content="ROOMI Universe — A dignity-first support system for Individuals, Anchors, and Networks">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --amber: #f5a623;
+      --amber-light: #ffd680;
+      --amber-soft: #e8c570;
+      --amber-glow: rgba(245, 166, 35, 0.35);
+      --gold: #d4a844;
+      --rose: #e8658a;
+      --rose-light: #f4a0b8;
+      --rose-glow: rgba(232, 101, 138, 0.25);
+      --cyan: #4ecdc4;
+      --cyan-light: #8ee8e2;
+      --cyan-glow: rgba(78, 205, 196, 0.25);
+      --violet: #9b72cf;
+      --violet-light: #c4a8e8;
+      --violet-glow: rgba(155, 114, 207, 0.3);
+      --blue: #5b9bd5;
+      --blue-light: #8ec4ee;
+      --blue-glow: rgba(91, 155, 213, 0.25);
+      --magenta: #d946ef;
+      --magenta-glow: rgba(217, 70, 239, 0.3);
+      --bg-deep: #010206;
+      --bg-card: rgba(12, 16, 30, 0.75);
+      --text-primary: #ede9e0;
+      --text-secondary: rgba(237, 233, 224, 0.72);
+      --text-muted: rgba(237, 233, 224, 0.35);
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+      background: var(--bg-deep);
+      background-image: radial-gradient(circle at 50% 95%, #181d45 0%, #010206 50%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    @keyframes neon-shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+
+    /* ── Cosmic Background ── */
+    #starfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+    #nebula-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0.9; }
+
+    /* Hub light rays — radiate beyond the card into surrounding space */
+    .hub-rays {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 1200px; height: 1200px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        transparent 0deg,   rgba(200,150,255,0.055) 4deg,  transparent 8deg,
+        transparent 28deg,  rgba(245,166,35,0.04)   32deg, transparent 36deg,
+        transparent 56deg,  rgba(78,205,196,0.045)  60deg, transparent 64deg,
+        transparent 84deg,  rgba(217,70,239,0.05)   88deg, transparent 92deg,
+        transparent 112deg, rgba(200,150,255,0.04)  116deg,transparent 120deg,
+        transparent 140deg, rgba(245,166,35,0.035)  144deg,transparent 148deg,
+        transparent 168deg, rgba(78,205,196,0.04)   172deg,transparent 176deg,
+        transparent 196deg, rgba(232,101,138,0.04)  200deg,transparent 204deg,
+        transparent 224deg, rgba(200,150,255,0.045) 228deg,transparent 232deg,
+        transparent 252deg, rgba(245,166,35,0.035)  256deg,transparent 260deg,
+        transparent 280deg, rgba(78,205,196,0.04)   284deg,transparent 288deg,
+        transparent 308deg, rgba(217,70,239,0.04)   312deg,transparent 316deg,
+        transparent 336deg, rgba(200,150,255,0.04)  340deg,transparent 344deg,
+        transparent 360deg
+      );
+      animation: spin 35s linear infinite;
+      pointer-events: none;
+      -webkit-mask-image: radial-gradient(ellipse 50% 44% at 50% 50%, transparent 28%, rgba(0,0,0,0.3) 45%, black 65%);
+      mask-image: radial-gradient(ellipse 50% 44% at 50% 50%, transparent 28%, rgba(0,0,0,0.3) 45%, black 65%);
+      z-index: 0;
+    }
+
+    /* Warm atmospheric pool behind the Individual orb */
+    .tier-individual::before {
+      content: '';
+      position: absolute;
+      width: 480px; height: 240px;
+      top: 38%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(ellipse,
+        rgba(255,210,80,0.09) 0%,
+        rgba(245,166,35,0.05) 30%,
+        rgba(217,70,239,0.02) 58%,
+        transparent 75%
+      );
+      filter: blur(40px);
+      pointer-events: none;
+      z-index: -1;
+      animation: breathe 5s ease-in-out infinite;
+    }
+
+    /* Nebula layers — tightly controlled atmosphere, not fog */
+    .nebula {
+      position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+      mix-blend-mode: screen;
+      opacity: 0.10;
+    }
+    /* Teal-green crown */
+    .nebula.n1 {
+      width: 1200px; height: 1000px;
+      background: radial-gradient(ellipse, rgba(30,180,160,0.18) 0%, rgba(20,140,120,0.1) 30%, rgba(50,120,200,0.06) 55%, transparent 75%);
+      top: -200px; left: 50%; transform: translateX(-50%);
+      filter: blur(44px);
+    }
+    /* Cyan right wing */
+    .nebula.n2 {
+      width: 1000px; height: 800px;
+      background: radial-gradient(ellipse, rgba(78,205,196,0.16) 0%, rgba(30,180,200,0.07) 40%, transparent 70%);
+      top: 15%; right: -20%;
+      filter: blur(48px);
+    }
+    /* Rose left wing */
+    .nebula.n3 {
+      width: 900px; height: 700px;
+      background: radial-gradient(ellipse, rgba(232,101,138,0.14) 0%, rgba(200,50,120,0.06) 40%, transparent 70%);
+      top: 10%; left: -20%;
+      filter: blur(46px);
+    }
+    /* Magenta heart — Hub zone (very subtle) */
+    .nebula.n4 {
+      width: 1300px; height: 1000px;
+      background: radial-gradient(ellipse, rgba(217,70,239,0.06) 0%, rgba(155,114,207,0.07) 25%, rgba(78,205,196,0.02) 50%, transparent 68%);
+      top: 32%; left: 50%; transform: translateX(-50%);
+      filter: blur(52px);
+    }
+    /* Amber crown */
+    .nebula.n5 {
+      width: 800px; height: 600px;
+      background: radial-gradient(ellipse, rgba(245,166,35,0.12) 0%, rgba(245,140,20,0.05) 40%, transparent 65%);
+      top: -8%; left: 50%; transform: translateX(-50%);
+      filter: blur(38px);
+    }
+    /* n6/n7/n8 — lower-half fog sources, hidden on all devices */
+    .nebula.n6, .nebula.n7, .nebula.n8 { display: none; }
+
+    /* ── Ecosystem Container ── */
+    body, html { min-height: 100vh; }
+    .eco-map {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 100px 32px 140px;
+    }
+
+    /* ── SVG Connection Canvas ── */
+    #conn-svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: -1;   /* always behind ALL content — prevents beam glow bleeding on text */
+      pointer-events: none;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 72px;
+      position: relative;
+      z-index: 2;
+    }
+    .header h1 {
+      font-weight: 800;
+      font-size: 2.4rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      background: linear-gradient(to right, var(--cyan-light), var(--magenta), var(--amber-light), var(--cyan), var(--rose-light), var(--cyan-light));
+      background-size: 200% auto;
+      animation: neon-shimmer 6s linear infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+      filter: drop-shadow(0 0 16px rgba(217,70,239,0.35));
+    }
+    .header p {
+      font-size: 0.95rem;
+      font-weight: 300;
+      color: var(--text-secondary);
+      letter-spacing: 0.08em;
+    }
+
+    /* ══════════════════════════════════════
+       TIER 1 — INDIVIDUAL (apex of diamond)
+       ══════════════════════════════════════ */
+    .tier-individual {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 90px;
+    }
+    .tier-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 0.62rem;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .tier-label .pip {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .tier-label.t1 { color: var(--amber-soft); }
+    .tier-label.t1 .pip { background: var(--amber); box-shadow: 0 0 10px var(--amber-glow), 0 0 20px rgba(245,166,35,0.15); }
+    .tier-label.t2 { color: var(--rose-light); }
+    .tier-label.t2 .pip { background: var(--rose); box-shadow: 0 0 10px var(--rose-glow), 0 0 20px rgba(232,101,138,0.15); }
+    .tier-label.t3 { color: var(--cyan-light); }
+    .tier-label.t3 .pip { background: var(--cyan); box-shadow: 0 0 10px var(--cyan-glow), 0 0 20px rgba(78,205,196,0.15); }
+
+    .orb-container {
+      position: relative;
+      width: 180px; height: 180px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    /* Outer cosmic halo — softened aurora ring */
+    .orb-container::before {
+      content: '';
+      position: absolute;
+      width: 260px; height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle,
+        rgba(255,230,120,0.07) 0%,
+        rgba(245,166,35,0.04) 25%,
+        transparent 55%
+      );
+      animation: breathe 4s ease-in-out infinite;
+    }
+    /* Second outer shimmer ring */
+    .orb-container::after {
+      content: '';
+      position: absolute;
+      width: 260px; height: 260px;
+      border-radius: 50%;
+      border: 1px solid rgba(245,166,35,0.12);
+      box-shadow: 0 0 20px rgba(245,166,35,0.08), inset 0 0 20px rgba(245,166,35,0.04);
+      animation: breathe 4s ease-in-out 1s infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.15); opacity: 0.45; }
+    }
+
+    .orb-ring {
+      position: absolute; border-radius: 50%;
+      border: 1px solid rgba(245,166,35,0.12);
+    }
+    .orb-ring.r1 { width: 180px; height: 180px; animation: pulseRing 5s ease-in-out infinite; border-color: rgba(245,166,35,0.12); box-shadow: 0 0 16px rgba(245,166,35,0.06); }
+    .orb-ring.r2 { width: 140px; height: 140px; border-color: rgba(245,166,35,0.22); animation: pulseRing 5s ease-in-out 0.8s infinite; box-shadow: 0 0 12px rgba(245,166,35,0.08); }
+    .orb-ring.r3 { width: 100px; height: 100px; border-color: rgba(245,166,35,0.35); animation: pulseRing 5s ease-in-out 1.6s infinite; box-shadow: 0 0 10px rgba(245,166,35,0.1); }
+
+    @keyframes pulseRing {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.12); opacity: 0.3; }
+    }
+
+    .orb-core {
+      position: relative; z-index: 2;
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fffbe8 0%, #ffeaa0 15%, var(--amber-light) 35%, var(--amber) 60%, #c07010 100%);
+      box-shadow:
+        0 0 40px rgba(255,200,60,0.8),
+        0 0 80px rgba(245,166,35,0.5),
+        0 0 160px rgba(245,166,35,0.25),
+        0 0 280px rgba(245,166,35,0.1);
+      display: flex; align-items: center; justify-content: center;
+      animation: coreGlow 3.5s ease-in-out infinite;
+    }
+    .orb-core svg { width: 28px; height: 28px; fill: #fff; opacity: 0.97; }
+
+    @keyframes coreGlow {
+      0%, 100% {
+        box-shadow: 0 0 40px rgba(255,200,60,0.8), 0 0 80px rgba(245,166,35,0.5), 0 0 160px rgba(245,166,35,0.25);
+      }
+      50% {
+        box-shadow: 0 0 60px rgba(255,220,80,0.9), 0 0 130px rgba(245,166,35,0.6), 0 0 240px rgba(245,166,35,0.3);
+      }
+    }
+
+    .ind-name {
+      font-size: 1.05rem; font-weight: 600;
+      color: var(--amber-light);
+      letter-spacing: 0.06em;
+      margin-bottom: 2px;
+      text-shadow: 0 0 20px rgba(245,166,35,0.3);
+    }
+    .ind-sub {
+      font-size: 0.72rem; font-weight: 300;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+    .ctx-tags {
+      display: flex; flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      padding-bottom: 24px;
+    }
+    .ctx-tag {
+      font-size: 0.66rem; font-weight: 400;
+      padding: 4px 12px; border-radius: 16px;
+      background: rgba(245,166,35,0.08);
+      border: 1px solid rgba(245,166,35,0.18);
+      color: var(--text-secondary);
+      transition: all 0.3s;
+      text-shadow: 0 0 8px rgba(245,166,35,0.15);
+    }
+    .ctx-tag:hover {
+      background: rgba(245,166,35,0.18);
+      border-color: rgba(245,166,35,0.35);
+      color: var(--amber-light);
+      box-shadow: 0 0 16px rgba(245,166,35,0.1);
+    }
+
+    /* ═══════════════════════════════════════
+       TIERS 2 & 3 — SUPPORT WINGS (parallel)
+       ═══════════════════════════════════════ */
+    .support-wings {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 36px;
+      margin: 0 0 80px;
+    }
+    /* Wing cards — grounded, content-forward, not floating */
+    #wing-anchor {
+      box-shadow: inset 0 1px 0 rgba(232,101,138,0.08);
+    }
+    #wing-network {
+      box-shadow: inset 0 1px 0 rgba(78,205,196,0.08);
+    }
+    #wing-anchor:hover {
+      box-shadow: 0 0 40px rgba(232,101,138,0.09), inset 0 1px 0 rgba(232,101,138,0.14);
+    }
+    #wing-network:hover {
+      box-shadow: 0 0 40px rgba(78,205,196,0.09), inset 0 1px 0 rgba(78,205,196,0.14);
+    }
+
+    .wing {
+      border-radius: 18px;
+      padding: 24px 22px 20px;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      transition: all 0.35s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .wing::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 18px;
+      padding: 1px;
+      pointer-events: none;
+      z-index: -1;
+    }
+    .wing::after {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: 18px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.35s;
+    }
+    .wing:hover::after { opacity: 1; }
+
+    .wing.anchor {
+      background: rgba(6,3,15,0.96);
+      border: 1px solid rgba(232,101,138,0.30);
+    }
+    .wing.anchor:hover {
+      border-color: rgba(232,101,138,0.48);
+      background: rgba(8,4,17,0.97);
+    }
+    .wing.anchor::after {
+      background: radial-gradient(ellipse at 50% 0%, rgba(232,101,138,0.05), transparent 60%);
+    }
+    .wing.network {
+      background: rgba(3,7,15,0.96);
+      border: 1px solid rgba(78,205,196,0.30);
+    }
+    .wing.network:hover {
+      border-color: rgba(78,205,196,0.48);
+      background: rgba(3,8,17,0.97);
+    }
+    .wing.network::after {
+      background: radial-gradient(ellipse at 50% 0%, rgba(78,205,196,0.05), transparent 60%);
+    }
+
+    .wing-head {
+      display: flex; align-items: center;
+      gap: 10px; margin-bottom: 8px;
+    }
+    .wing-icon {
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .wing-icon svg { width: 18px; height: 18px; }
+    .wing-icon.anchor-ic {
+      background: rgba(232,101,138,0.15);
+      border: 1px solid rgba(232,101,138,0.25);
+      box-shadow: 0 0 14px rgba(232,101,138,0.1);
+    }
+    .wing-icon.anchor-ic svg { fill: var(--rose-light); }
+    .wing-icon.network-ic {
+      background: rgba(78,205,196,0.15);
+      border: 1px solid rgba(78,205,196,0.25);
+      box-shadow: 0 0 14px rgba(78,205,196,0.1);
+    }
+    .wing-icon.network-ic svg { fill: var(--cyan-light); }
+
+    .wing-title {
+      font-size: 0.95rem; font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .wing-title.anchor-c { color: var(--rose-light); text-shadow: 0 0 16px rgba(232,101,138,0.25); }
+    .wing-title.network-c { color: var(--cyan-light); text-shadow: 0 0 16px rgba(78,205,196,0.25); }
+
+    .wing-desc {
+      font-size: 0.72rem; line-height: 1.55;
+      color: var(--text-secondary);
+      font-weight: 300;
+      margin-bottom: 12px;
+    }
+    .wing-tags {
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .w-tag {
+      font-size: 0.64rem; padding: 3px 10px;
+      border-radius: 12px; font-weight: 400;
+      transition: all 0.3s;
+    }
+    .w-tag.anc {
+      background: rgba(232,101,138,0.08);
+      border: 1px solid rgba(232,101,138,0.18);
+      color: rgba(244,160,184,0.85);
+    }
+    .w-tag.anc:hover { background: rgba(232,101,138,0.2); color: var(--rose-light); box-shadow: 0 0 12px rgba(232,101,138,0.1); }
+    .w-tag.net {
+      background: rgba(78,205,196,0.08);
+      border: 1px solid rgba(78,205,196,0.18);
+      color: rgba(142,232,226,0.85);
+    }
+    .w-tag.net:hover { background: rgba(78,205,196,0.2); color: var(--cyan-light); box-shadow: 0 0 12px rgba(78,205,196,0.1); }
+
+    /* ═══════════════════════════════════════════
+       ROOMI HUB — central gravitational core
+       ═══════════════════════════════════════════ */
+    .hub-zone {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      justify-content: center;
+      margin: 0 0 96px;
+    }
+
+    /* Hub outer corona — removed to reduce haze */
+    .hub-zone::before {
+      display: none;
+    }
+
+    .hub-core {
+      position: relative;
+      width: 100%;
+      max-width: 640px;
+      border-radius: 32px;
+      padding: 48px 40px 36px;
+      text-align: center;
+      overflow: hidden;
+      background: #07040f;
+      border: 1px solid rgba(190,150,255,0.62);
+      box-shadow:
+        0 0 0 1px rgba(200,160,255,0.06),
+        0 0 16px rgba(180,130,255,0.36),
+        0 0 44px rgba(155,114,207,0.14),
+        0 4px 50px rgba(0,0,0,0.92),
+        inset 0 1px 0 rgba(255,255,255,0.10),
+        inset 0 -1px 0 rgba(180,130,255,0.12);
+    }
+
+    /* Rotating conic aura — masked to outer ring only, no interior wash */
+    .hub-aura {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 700px; height: 700px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: conic-gradient(
+        from 0deg,
+        transparent 0%,
+        rgba(200,150,255,0.55) 8%,
+        rgba(217,70,239,0.45) 16%,
+        transparent 24%,
+        rgba(245,166,35,0.45) 32%,
+        rgba(255,200,80,0.30) 40%,
+        transparent 48%,
+        rgba(78,205,196,0.40) 56%,
+        rgba(34,197,120,0.25) 64%,
+        transparent 72%,
+        rgba(232,101,138,0.35) 82%,
+        rgba(91,155,213,0.25) 92%,
+        transparent 100%
+      );
+      animation: spin 10s linear infinite;
+      pointer-events: none;
+      filter: blur(0px);
+      opacity: 0.20;
+      -webkit-mask-image: radial-gradient(circle, transparent 83%, black 100%);
+      mask-image: radial-gradient(circle, transparent 83%, black 100%);
+    }
+    @keyframes spin {
+      from { transform: translate(-50%,-50%) rotate(0deg); }
+      to { transform: translate(-50%,-50%) rotate(360deg); }
+    }
+
+    /* Secondary counter-rotating ring */
+    .hub-aura::after {
+      content: '';
+      position: absolute;
+      inset: 40px;
+      border-radius: 50%;
+      border: 1px solid rgba(155,114,207,0.06);
+      animation: spinReverse 20s linear infinite;
+    }
+    @keyframes spinReverse {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(-360deg); }
+    }
+
+    .hub-emblem {
+      position: relative; z-index: 2;
+      width: 90px; height: 90px;
+      margin: 0 auto 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 32%,
+        #f0e8ff 0%,
+        #dcc8ff 15%,
+        var(--violet-light) 30%,
+        var(--violet) 58%,
+        #4a2e80 85%,
+        #2a1545 100%
+      );
+      box-shadow:
+        0 0 0 1px rgba(200,160,255,0.38),
+        0 0 16px rgba(220,180,255,0.95),
+        0 0 36px rgba(155,114,207,0.70),
+        0 0 72px rgba(155,114,207,0.32);
+      display: flex; align-items: center; justify-content: center;
+      animation: hubGlow 4s ease-in-out infinite;
+    }
+    .hub-emblem svg { width: 34px; height: 34px; fill: #fff; opacity: 0.97; filter: drop-shadow(0 0 6px rgba(255,255,255,0.6)); }
+
+    /* Lens flare cross — brighter */
+    .hub-emblem::before {
+      content: '';
+      position: absolute;
+      width: 200px; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(217,70,239,0.2), rgba(220,180,255,0.6), rgba(255,255,255,0.9), rgba(220,180,255,0.6), rgba(217,70,239,0.2), transparent);
+      animation: flarePulse 4s ease-in-out infinite;
+    }
+    .hub-emblem::after {
+      content: '';
+      position: absolute;
+      width: 2px; height: 140px;
+      background: linear-gradient(180deg, transparent, rgba(217,70,239,0.2), rgba(220,180,255,0.5), rgba(255,255,255,0.8), rgba(220,180,255,0.5), rgba(217,70,239,0.2), transparent);
+      animation: flarePulse 4s ease-in-out 0.5s infinite;
+    }
+    @keyframes flarePulse {
+      0%, 100% { opacity: 0.6; transform: scale(0.85); }
+      50% { opacity: 1; transform: scale(1.15); }
+    }
+
+    @keyframes hubGlow {
+      0%, 100% {
+        box-shadow: 0 0 0 1px rgba(200,160,255,0.35), 0 0 16px rgba(220,180,255,0.92), 0 0 36px rgba(155,114,207,0.65), 0 0 72px rgba(155,114,207,0.28);
+      }
+      50% {
+        box-shadow: 0 0 0 1px rgba(220,180,255,0.45), 0 0 22px rgba(240,210,255,1), 0 0 50px rgba(180,130,255,0.78), 0 0 100px rgba(155,114,207,0.40);
+      }
+    }
+
+    .hub-name {
+      position: relative; z-index: 2;
+      font-size: 1.9rem; font-weight: 800;
+      letter-spacing: 0.22em;
+      background: linear-gradient(to right, var(--violet-light) 0%, #dcc8ff 20%, var(--magenta) 40%, var(--cyan-light) 60%, var(--amber-light) 80%, var(--violet-light) 100%);
+      background-size: 200% auto;
+      animation: neon-shimmer 5s linear infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 5px;
+      filter: drop-shadow(0 0 14px rgba(155,114,207,0.45));
+    }
+    .hub-role {
+      position: relative; z-index: 2;
+      font-size: 0.8rem;
+      color: rgba(237,233,224,0.80);
+      font-weight: 400;
+      letter-spacing: 0.06em;
+      margin-bottom: 20px;
+    }
+
+    .hub-facets {
+      position: relative; z-index: 2;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .hub-facet {
+      display: flex; align-items: center;
+      gap: 7px;
+      font-size: 0.7rem; font-weight: 500;
+      color: rgba(237,233,224,0.80);
+      padding: 7px 16px;
+      border-radius: 20px;
+      background: rgba(155,114,207,0.12);
+      border: 1px solid rgba(155,114,207,0.30);
+      transition: all 0.3s;
+    }
+    .hub-facet:hover {
+      background: rgba(155,114,207,0.22);
+      color: var(--violet-light);
+      border-color: rgba(155,114,207,0.48);
+    }
+    .hub-facet svg { width: 14px; height: 14px; fill: var(--violet-light); opacity: 0.9; }
+
+    /* ══════════════════════════════════════
+       GOVERNANCE — receded support layer
+       ══════════════════════════════════════ */
+    .gov-zone {
+      position: relative;
+      z-index: 2;
+      margin-top: 0;
+      opacity: 0.93;
+      transform: scale(0.98);
+      transform-origin: top center;
+    }
+
+    .gov-divider {
+      display: flex; align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+      padding: 0 4px;
+    }
+    .gov-divider .line {
+      flex: 1; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(91,155,213,0.32), transparent);
+    }
+    .gov-divider .label {
+      font-size: 0.68rem; font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      background: linear-gradient(to right, var(--blue-light), var(--cyan), var(--magenta), var(--cyan-light), var(--blue-light));
+      background-size: 200% auto;
+      animation: neon-shimmer 4.5s linear infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      white-space: nowrap;
+      opacity: 0.95;
+    }
+
+    /* Board pair grid */
+    .board-pairs {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+    }
+
+    .pair-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+    }
+
+    .b-card {
+      width: 100%;
+      border-radius: 12px;
+      padding: 12px 5px 9px;
+      text-align: center;
+      transition: all 0.35s ease;
+      position: relative;
+    }
+    .b-card.digital {
+      background: rgba(10,13,26,0.92);
+      border: 1px solid rgba(91,155,213,0.22);
+    }
+    .b-card.digital:hover {
+      border-color: rgba(91,155,213,0.38);
+      background: rgba(12,16,32,0.95);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.35), 0 0 12px rgba(91,155,213,0.08);
+    }
+    .b-card.human {
+      background: rgba(10,13,26,0.58);
+      border: 1px dashed rgba(91,155,213,0.18);
+    }
+    .b-card.human:hover {
+      border-color: rgba(91,155,213,0.28);
+      background: rgba(12,16,32,0.70);
+    }
+
+    .b-icon {
+      width: 38px; height: 38px;
+      margin: 0 auto 6px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .b-icon svg { width: 22px; height: 22px; }
+
+    .b-icon.ic-ledger { background: rgba(245,190,70,0.16); border: 1px solid rgba(245,190,70,0.28); box-shadow: 0 0 8px rgba(245,190,70,0.08); }
+    .b-icon.ic-ledger svg { fill: #f5c846; }
+    .b-icon.ic-beacon { background: rgba(232,120,100,0.16); border: 1px solid rgba(232,120,100,0.28); box-shadow: 0 0 8px rgba(232,120,100,0.08); }
+    .b-icon.ic-beacon svg { fill: #e8846a; }
+    .b-icon.ic-guardian { background: rgba(150,180,220,0.16); border: 1px solid rgba(150,180,220,0.28); box-shadow: 0 0 8px rgba(150,180,220,0.08); }
+    .b-icon.ic-guardian svg { fill: #a0bce0; }
+    .b-icon.ic-circuit { background: rgba(130,200,255,0.16); border: 1px solid rgba(130,200,255,0.28); box-shadow: 0 0 8px rgba(130,200,255,0.08); }
+    .b-icon.ic-circuit svg { fill: #82c8ff; }
+    .b-icon.ic-horizon { background: rgba(245,180,100,0.16); border: 1px solid rgba(245,180,100,0.28); box-shadow: 0 0 8px rgba(245,180,100,0.08); }
+    .b-icon.ic-horizon svg { fill: #f5b464; }
+    .b-icon.ic-echo { background: rgba(160,140,220,0.16); border: 1px solid rgba(160,140,220,0.28); box-shadow: 0 0 8px rgba(160,140,220,0.08); }
+    .b-icon.ic-echo svg { fill: #b4a0e0; }
+
+    /* Human avatars — color-paired to their digital counterpart */
+    .b-icon.ic-human {
+      border-radius: 50%;
+    }
+    .b-icon.ic-human svg { opacity: 0.85; }
+    .b-icon.ic-human-ledger {
+      background: rgba(245,190,70,0.10); border: 1.5px solid rgba(245,190,70,0.35);
+      box-shadow: 0 0 8px rgba(245,190,70,0.10);
+    }
+    .b-icon.ic-human-ledger svg { fill: #f5c846; }
+    .b-icon.ic-human-beacon {
+      background: rgba(232,120,100,0.10); border: 1.5px solid rgba(232,120,100,0.35);
+      box-shadow: 0 0 8px rgba(232,120,100,0.10);
+    }
+    .b-icon.ic-human-beacon svg { fill: #e8846a; }
+    .b-icon.ic-human-guardian {
+      background: rgba(150,180,220,0.10); border: 1.5px solid rgba(150,180,220,0.35);
+      box-shadow: 0 0 8px rgba(150,180,220,0.10);
+    }
+    .b-icon.ic-human-guardian svg { fill: #a0bce0; }
+    .b-icon.ic-human-circuit {
+      background: rgba(130,200,255,0.10); border: 1.5px solid rgba(130,200,255,0.35);
+      box-shadow: 0 0 8px rgba(130,200,255,0.10);
+    }
+    .b-icon.ic-human-circuit svg { fill: #82c8ff; }
+    .b-icon.ic-human-horizon {
+      background: rgba(245,180,100,0.10); border: 1.5px solid rgba(245,180,100,0.35);
+      box-shadow: 0 0 8px rgba(245,180,100,0.10);
+    }
+    .b-icon.ic-human-horizon svg { fill: #f5b464; }
+    .b-icon.ic-human-echo {
+      background: rgba(160,140,220,0.10); border: 1.5px solid rgba(160,140,220,0.35);
+      box-shadow: 0 0 8px rgba(160,140,220,0.10);
+    }
+    .b-icon.ic-human-echo svg { fill: #b4a0e0; }
+
+    .b-name {
+      font-size: 0.75rem; font-weight: 600;
+      color: rgba(237,233,224,0.95);
+      margin-bottom: 2px;
+      letter-spacing: 0.02em;
+      line-height: 1.3;
+    }
+    .b-role {
+      font-size: 0.60rem;
+      color: rgba(237,233,224,0.55);
+      font-weight: 400;
+      line-height: 1.3;
+    }
+
+    /* Pairing connector */
+    .pair-link {
+      display: flex; flex-direction: column;
+      align-items: center;
+      height: 20px;
+      justify-content: center;
+      position: relative;
+    }
+    .pair-link::before {
+      content: '';
+      width: 1px; height: 100%;
+      background: linear-gradient(to bottom, rgba(91,155,213,0.35), rgba(91,155,213,0.08));
+    }
+    .pair-link .link-dot {
+      position: absolute; bottom: 0;
+      width: 3px; height: 3px;
+      border-radius: 50%;
+      background: rgba(91,155,213,0.45);
+      box-shadow: 0 0 4px rgba(91,155,213,0.25);
+    }
+
+    /* ── Legend ── */
+    .legend {
+      position: relative; z-index: 2;
+      display: flex; align-items: center;
+      justify-content: center;
+      flex-wrap: wrap; gap: 18px;
+      margin-top: 72px;
+      padding: 10px 20px;
+      border-radius: 12px;
+      background: rgba(10,13,26,0.90);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .leg {
+      display: flex; align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+    }
+    .leg .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .leg .dot.d1 { background: var(--amber); box-shadow: 0 0 6px var(--amber-glow); }
+    .leg .dot.d2 { background: var(--rose); box-shadow: 0 0 6px var(--rose-glow); }
+    .leg .dot.d3 { background: var(--cyan); box-shadow: 0 0 6px var(--cyan-glow); }
+    .leg .dot.dh { background: var(--violet); box-shadow: 0 0 6px var(--violet-glow); }
+    .leg .ln {
+      width: 26px; height: 0;
+    }
+    .leg .ln.solid { border-top: 2px solid var(--amber); }
+    .leg .ln.dashed { border-top: 2px dashed rgba(91,155,213,0.5); }
+
+    .footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 0.80rem;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+      font-weight: 300;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ── Founding Executive Council ── */
+    .founding-council {
+      position: relative;
+      z-index: 2;
+      margin-top: 64px;
+    }
+    .council-divider {
+      display: flex; align-items: center;
+      gap: 10px; margin-bottom: 24px;
+    }
+    .council-divider .line {
+      flex: 1; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(245,200,100,0.25), transparent);
+    }
+    .council-divider .label {
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      background: linear-gradient(to right, var(--amber-soft), var(--magenta), var(--cyan-light), var(--gold), var(--amber-soft));
+      background-size: 200% auto;
+      animation: neon-shimmer 5s linear infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .council-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .council-card {
+      background: rgba(10,13,26,0.78);
+      border: 1px solid rgba(245,200,100,0.18);
+      border-radius: 12px;
+      padding: 20px 12px 16px;
+      text-align: center;
+      transition: border-color 0.3s, background 0.3s;
+    }
+    .council-card:hover {
+      border-color: rgba(245,200,100,0.35);
+      background: rgba(12,16,32,0.85);
+    }
+    .council-avatar {
+      width: 36px; height: 36px;
+      margin: 0 auto 8px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .council-avatar.av-wade {
+      background: rgba(91,155,213,0.15);
+      border: 1.5px solid rgba(91,155,213,0.40);
+      color: rgba(91,155,213,0.90);
+    }
+    .council-avatar.av-drew {
+      background: rgba(78,205,196,0.15);
+      border: 1.5px solid rgba(78,205,196,0.40);
+      color: rgba(78,205,196,0.90);
+    }
+    .council-avatar.av-cassie {
+      background: rgba(217,70,239,0.15);
+      border: 1.5px solid rgba(217,70,239,0.40);
+      color: rgba(217,70,239,0.90);
+    }
+    .council-name {
+      font-size: 0.85rem; font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .council-role {
+      font-size: 0.68rem; font-weight: 400;
+      color: var(--text-secondary);
+    }
+    .council-support {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(255,255,255,0.08);
+    }
+    .council-support .cs-name {
+      font-size: 0.65rem; font-weight: 500;
+      color: rgba(180,180,200,0.85);
+    }
+    .council-support .cs-role {
+      font-size: 0.55rem; font-weight: 300;
+      color: rgba(237,233,224,0.55);
+      margin-bottom: 2px;
+    }
+    .council-card:nth-child(2) .council-support {
+      border-top-color: rgba(78,205,196,0.15);
+    }
+    .council-card:nth-child(2) .council-support .cs-name {
+      color: rgba(78,205,196,0.60);
+    }
+    .council-card:nth-child(3) .council-support {
+      border-top-color: rgba(217,70,239,0.15);
+    }
+    .council-card:nth-child(3) .council-support .cs-name {
+      color: rgba(217,70,239,0.60);
+    }
+
+    /* ── Responsive — Layout ── */
+    @media (max-width: 820px) {
+      html, body { overflow-x: hidden; }
+      .eco-map { padding: 64px 18px 100px; }
+      .support-wings { grid-template-columns: 1fr; gap: 14px; }
+      .board-pairs { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .header h1 { font-size: 1.5rem; letter-spacing: 0.10em; }
+      .header p { font-size: 0.82rem; }
+      .hub-core { padding: 32px 22px 24px; }
+      .hub-name { font-size: 1.4rem; letter-spacing: 0.12em; }
+      .hub-role { font-size: 0.72rem; }
+      .hub-emblem { width: 70px; height: 70px; }
+      .hub-emblem::before { width: 140px; }
+      .hub-emblem::after { height: 100px; }
+      .hub-rays { display: none; }
+      .council-grid { gap: 10px; }
+      .council-card { padding: 16px 10px 12px; }
+      .council-name { font-size: 0.78rem; }
+      .council-role { font-size: 0.62rem; }
+      .council-support .cs-name { font-size: 0.58rem; }
+      .council-support .cs-role { font-size: 0.50rem; }
+      .tier-individual { margin-bottom: 60px; }
+      .tier-individual::before { width: 300px; height: 150px; }
+      .hub-zone { margin: 0 0 60px; }
+      .founding-council { margin-top: 44px; }
+      .legend { margin-top: 48px; gap: 12px; padding: 8px 14px; }
+      .leg { font-size: 0.65rem; }
+      .footer { font-size: 0.70rem; }
+    }
+
+    @media (max-width: 520px) {
+      .eco-map { padding: 48px 12px 80px; }
+      .header h1 { font-size: 1.15rem; letter-spacing: 0.08em; }
+      .header p { font-size: 0.75rem; }
+      .header { margin-bottom: 48px; }
+      .board-pairs { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+      .b-name { font-size: 0.62rem; }
+      .b-role { font-size: 0.50rem; }
+      .b-icon { width: 32px; height: 32px; margin: 0 auto 4px; }
+      .b-card { padding: 8px 4px 6px; border-radius: 8px; }
+      .pair-link { height: 14px; }
+      .hub-facets { flex-direction: column; align-items: center; }
+      .hub-facet { font-size: 0.62rem; padding: 5px 12px; }
+      .hub-name { font-size: 1.1rem; letter-spacing: 0.08em; }
+      .hub-emblem { width: 60px; height: 60px; margin: 0 auto 14px; }
+      .hub-emblem svg { width: 28px; height: 28px; }
+      .hub-emblem::before { width: 110px; }
+      .hub-emblem::after { height: 80px; }
+      .orb-container { width: 120px; height: 120px; margin-bottom: 18px; }
+      .orb-container::before { width: 180px; height: 180px; }
+      .orb-ring.r1 { width: 120px; height: 120px; }
+      .orb-ring.r2 { width: 95px; height: 95px; }
+      .orb-ring.r3 { width: 70px; height: 70px; }
+      .orb-core { width: 50px; height: 50px; }
+      .council-grid { grid-template-columns: 1fr; gap: 10px; }
+      .council-card { padding: 18px 16px 14px; }
+      .council-avatar { width: 42px; height: 42px; font-size: 0.8rem; }
+      .council-name { font-size: 0.88rem; }
+      .council-role { font-size: 0.70rem; }
+      .council-support .cs-name { font-size: 0.65rem; }
+      .council-support .cs-role { font-size: 0.58rem; }
+      .gov-divider .label { font-size: 0.58rem; }
+      .council-divider .label { font-size: 0.58rem; }
+      .wing { padding: 16px 14px 12px; }
+      .wing-title { font-size: 0.82rem; }
+      .wing-desc { font-size: 0.68rem; }
+      .w-tag { font-size: 0.58rem; padding: 2px 8px; }
+      .tier-label { font-size: 0.56rem; }
+      .legend { flex-direction: column; gap: 8px; align-items: flex-start; padding: 12px 16px; }
+      .leg { font-size: 0.62rem; }
+      .footer { font-size: 0.65rem; }
+    }
+
+    @media (max-width: 375px) {
+      .header h1 { font-size: 1.0rem; letter-spacing: 0.06em; }
+      .hub-name { font-size: 0.95rem; }
+      .board-pairs { gap: 4px; }
+      .b-name { font-size: 0.56rem; }
+      .b-role { font-size: 0.46rem; }
+      .b-icon { width: 28px; height: 28px; border-radius: 6px; }
+    }
+
+    /* ── Mobile Performance — kill GPU-expensive effects ── */
+    @media (max-width: 820px) {
+      .wing, .b-card.digital, .legend {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+      .nebula.n2, .nebula.n3, .nebula.n6, .nebula.n7, .nebula.n8 { display: none; }
+      .nebula.n1 { filter: blur(40px); opacity: 0.55; }
+      .nebula.n4 { filter: blur(50px); opacity: 0.55; }
+      .nebula.n5 { filter: blur(35px); opacity: 0.45; }
+      .hub-aura { animation: none; }
+      .hub-aura::after { animation: none; }
+      .orb-container::after { animation: none; }
+      .orb-ring.r2, .orb-ring.r3 { animation: none; opacity: 0.4; }
+      .tier-individual::before { animation: none; }
+      #nebula-canvas { display: none; }
+      .hub-emblem,
+      .hub-emblem::before,
+      .hub-emblem::after,
+      .orb-core { animation: none !important; }
+      .hub-core {
+        background: rgba(20, 12, 45, 0.97);
+        border-color: rgba(180,130,255,0.25);
+      }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<canvas id="nebula-canvas"></canvas>
+<div class="nebula n1"></div>
+<div class="nebula n2"></div>
+<div class="nebula n3"></div>
+<div class="nebula n4"></div>
+<div class="nebula n5"></div>
+<div class="nebula n6"></div>
+<div class="nebula n7"></div>
+<div class="nebula n8"></div>
+
+<div class="eco-map" id="eco">
+
+  <!-- SVG connection lines -->
+  <svg id="conn-svg" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="beam-glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="4"/>
+      </filter>
+      <filter id="beam-glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="8"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <!-- ── HEADER ── -->
+  <header class="header">
+    <h1>ROOMI Universe</h1>
+    <p>A dignity-first support system for Individuals, Anchors, and Networks</p>
+  </header>
+
+  <!-- ── TIER 1: INDIVIDUAL ── -->
+  <div class="tier-individual" id="zone-ind">
+    <div class="tier-label t1"><span class="pip"></span>Tier 1 — Individual</div>
+    <div class="orb-container">
+      <div class="orb-ring r1"></div>
+      <div class="orb-ring r2"></div>
+      <div class="orb-ring r3"></div>
+      <div class="orb-core">
+        <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+      </div>
+    </div>
+    <div class="ind-name">Person with IDD</div>
+    <div class="ind-sub">The center of everything ROOMI does</div>
+    <div class="ctx-tags">
+      <span class="ctx-tag">Young Adults</span>
+      <span class="ctx-tag">IDD Adults</span>
+      <span class="ctx-tag">Independent Living</span>
+      <span class="ctx-tag">Transition to Work</span>
+      <span class="ctx-tag">Community Life</span>
+    </div>
+  </div>
+
+  <!-- ── TIERS 2 & 3: SUPPORT WINGS ── -->
+  <div class="support-wings" id="zone-wings">
+
+    <!-- Anchor (left) -->
+    <div class="wing anchor" id="wing-anchor">
+      <div class="wing-head">
+        <div class="wing-icon anchor-ic">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
+        </div>
+        <div class="wing-title anchor-c">Anchor</div>
+      </div>
+      <div class="tier-label t2" style="margin-bottom:8px"><span class="pip"></span>Tier 2 — Caregiver Interface</div>
+      <p class="wing-desc">Trusted supporters who empower without surveillance. Connection through trust, not control.</p>
+      <div class="wing-tags">
+        <span class="w-tag anc">Parents</span>
+        <span class="w-tag anc">Guardians</span>
+        <span class="w-tag anc">POA Holders</span>
+        <span class="w-tag anc">Family</span>
+        <span class="w-tag anc">Trusted Supporters</span>
+      </div>
+    </div>
+
+    <!-- Network (right) -->
+    <div class="wing network" id="wing-network">
+      <div class="wing-head">
+        <div class="wing-icon network-ic">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        </div>
+        <div class="wing-title network-c">Network</div>
+      </div>
+      <div class="tier-label t3" style="margin-bottom:8px"><span class="pip"></span>Tier 3 — Professional Layer</div>
+      <p class="wing-desc">Where coordination, documentation, and scale live. Professional and institutional support infrastructure.</p>
+      <div class="wing-tags">
+        <span class="w-tag net">DSPs</span>
+        <span class="w-tag net">Agencies</span>
+        <span class="w-tag net">Therapists</span>
+        <span class="w-tag net">Educators</span>
+        <span class="w-tag net">Job Coaches</span>
+        <span class="w-tag net">Care Teams</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── ROOMI HUB ── -->
+  <div class="hub-zone" id="zone-hub">
+    <div class="hub-rays"></div>
+    <div class="hub-core">
+      <div class="hub-aura"></div>
+      <div class="hub-emblem">
+        <svg viewBox="0 0 24 24"><path d="M19.8 10.7L4.2 5l-.7 1.9L17.6 12H5c-1.1 0-2 .9-2 2v4c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-5.5c0-.8-.5-1.6-1.2-1.8zM7 17H5v-2h2v2zm12 0H9v-2h10v2z"/><circle cx="19" cy="7" r="2.5"/></svg>
+      </div>
+      <div class="hub-name">ROOMI HUB</div>
+      <div class="hub-role">Central Intelligence Layer</div>
+      <div class="hub-facets">
+        <div class="hub-facet">
+          <svg viewBox="0 0 24 24"><path d="M16.5 3c-1.74 0-3.41.81-4.5 2.09C10.91 3.81 9.24 3 7.5 3 4.42 3 2 5.42 2 8.5c0 3.78 3.4 6.86 8.55 11.54L12 21.35l1.45-1.32C18.6 15.36 22 12.28 22 8.5 22 5.42 19.58 3 16.5 3z"/></svg>
+          Personal Companion
+        </div>
+        <div class="hub-facet">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
+          Ecosystem Intelligence
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GOVERNANCE LAYER ── -->
+  <div class="gov-zone" id="zone-gov">
+    <div class="gov-divider">
+      <div class="line"></div>
+      <div class="label">Governance & Oversight</div>
+      <div class="line"></div>
+    </div>
+
+    <div class="board-pairs" id="board-grid">
+
+      <!-- Pair 1: Ledger → Treasurer -->
+      <div class="pair-col">
+        <div class="b-card digital">
+          <div class="b-icon ic-ledger">
+            <img src="ledger_upscaled_lossless.webp" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover;">
+          </div>
+          <div class="b-name">Ledger</div>
+          <div class="b-role">Finance Intelligence</div>
+        </div>
+        <div class="pair-link"><span class="link-dot"></span></div>
+        <div class="b-card human">
+          <div class="b-icon ic-human ic-human-ledger">
+            <svg viewBox="0 0 48 48">
+              <defs>
+                <radialGradient id="tg" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#fff7d4"/><stop offset="40%" stop-color="#f5c846"/><stop offset="100%" stop-color="#a87c10"/></radialGradient>
+                <filter id="tgl"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <circle cx="24" cy="24" r="22" fill="#1a1508" stroke="#f5c846" stroke-width="0.8" opacity="0.6"/>
+              <circle cx="24" cy="24" r="18" fill="none" stroke="#f5c846" stroke-width="0.4" opacity="0.25"/>
+              <rect x="9" y="30" width="5.5" height="10" rx="1.5" fill="url(#tg)" filter="url(#tgl)"/>
+              <rect x="17" y="24" width="5.5" height="16" rx="1.5" fill="url(#tg)" filter="url(#tgl)" opacity="0.9"/>
+              <rect x="25" y="17" width="5.5" height="23" rx="1.5" fill="url(#tg)" filter="url(#tgl)" opacity="0.8"/>
+              <rect x="33" y="10" width="5.5" height="30" rx="1.5" fill="url(#tg)" filter="url(#tgl)" opacity="0.7"/>
+              <path d="M11.5 28 L20 21 L28 14 L36 8" fill="none" stroke="#fff7d4" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="2 3" opacity="0.6"/>
+              <circle cx="11.5" cy="28" r="1.8" fill="#fff7d4" opacity="0.9"/>
+              <circle cx="20" cy="21" r="1.8" fill="#fff7d4" opacity="0.9"/>
+              <circle cx="28" cy="14" r="1.8" fill="#fff7d4" opacity="0.9"/>
+              <circle cx="36" cy="8" r="1.8" fill="#fff7d4" opacity="0.9"/>
+              <text x="24" y="46" text-anchor="middle" fill="#f5c846" font-size="3.5" font-weight="700" letter-spacing="0.3" opacity="0.5">$</text>
+            </svg>
+          </div>
+          <div class="b-name">Treasurer</div>
+          <div class="b-role">↔ Ledger</div>
+        </div>
+      </div>
+
+      <!-- Pair 2: Beacon → Fundraising Chair -->
+      <div class="pair-col">
+        <div class="b-card digital">
+          <div class="b-icon ic-beacon">
+            <img src="beacon-icon.png" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover;">
+          </div>
+          <div class="b-name">Beacon</div>
+          <div class="b-role">Fundraising Intelligence</div>
+        </div>
+        <div class="pair-link"><span class="link-dot"></span></div>
+        <div class="b-card human">
+          <div class="b-icon ic-human ic-human-beacon">
+            <svg viewBox="0 0 48 48">
+              <defs>
+                <radialGradient id="bg" cx="50%" cy="35%" r="60%"><stop offset="0%" stop-color="#ffe0d4"/><stop offset="45%" stop-color="#e8846a"/><stop offset="100%" stop-color="#8c3020"/></radialGradient>
+                <filter id="bgl"><feGaussianBlur stdDeviation="1.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <circle cx="24" cy="24" r="22" fill="#1a0d08" stroke="#e8846a" stroke-width="0.8" opacity="0.6"/>
+              <circle cx="24" cy="24" r="18" fill="none" stroke="#e8846a" stroke-width="0.4" opacity="0.2"/>
+              <path d="M24 40l-2.8-2.5C13 30.5 8 26 8 20.2c0-4.7 3.7-8.5 8.3-8.5 2.6 0 5.1 1.2 7.7 3.6 2.6-2.4 5.1-3.6 7.7-3.6C36.3 11.7 40 15.5 40 20.2c0 5.8-5 10.3-13.2 17.3L24 40z" fill="url(#bg)" filter="url(#bgl)"/>
+              <path d="M24 38l-2.4-2.2C14 29 10 25 10 20.2c0-3.8 3-6.8 6.7-6.8 2.1 0 4.3 1 7.3 3.2 3-2.2 5.2-3.2 7.3-3.2 3.7 0 6.7 3 6.7 6.8 0 4.8-4 8.8-11.6 15.6L24 38z" fill="none" stroke="#ffe0d4" stroke-width="0.8" opacity="0.4"/>
+              <circle cx="20" cy="22" r="1.2" fill="#fff" opacity="0.7"/>
+              <circle cx="28" cy="22" r="1.2" fill="#fff" opacity="0.7"/>
+              <path d="M20 26 Q24 30 28 26" fill="none" stroke="#fff" stroke-width="0.8" stroke-linecap="round" opacity="0.5"/>
+              <path d="M24 12 L24 8" stroke="#e8846a" stroke-width="1.2" opacity="0.4"/>
+              <circle cx="24" cy="7" r="1.5" fill="#e8846a" filter="url(#bgl)" opacity="0.6"/>
+            </svg>
+          </div>
+          <div class="b-name">Fundraising Chair</div>
+          <div class="b-role">↔ Beacon</div>
+        </div>
+      </div>
+
+      <!-- Pair 3: Guardian → Legal Advisor -->
+      <div class="pair-col">
+        <div class="b-card digital">
+          <div class="b-icon ic-guardian">
+            <img src="guardian_upscaled_lossless.webp" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover;">
+          </div>
+          <div class="b-name">Guardian</div>
+          <div class="b-role">Legal Intelligence</div>
+        </div>
+        <div class="pair-link"><span class="link-dot"></span></div>
+        <div class="b-card human">
+          <div class="b-icon ic-human ic-human-guardian">
+            <svg viewBox="0 0 48 48">
+              <defs>
+                <linearGradient id="gg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#d4e4ff"/><stop offset="50%" stop-color="#a0bce0"/><stop offset="100%" stop-color="#506880"/></linearGradient>
+                <filter id="ggl"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <circle cx="24" cy="24" r="22" fill="#0a0f1a" stroke="#a0bce0" stroke-width="0.8" opacity="0.6"/>
+              <path d="M24 4L7 11v12c0 10.2 7.2 19.8 17 22 9.8-2.2 17-11.8 17-22V11L24 4z" fill="url(#gg)" filter="url(#ggl)" opacity="0.2"/>
+              <path d="M24 6L9 12v11c0 9.4 6.5 18 15 20 8.5-2 15-10.6 15-20V12L24 6z" fill="none" stroke="url(#gg)" stroke-width="1.5"/>
+              <path d="M24 10L13 15v8.5c0 6.8 4.8 13 11 14.5 6.2-1.5 11-7.7 11-14.5V15L24 10z" fill="none" stroke="#a0bce0" stroke-width="0.6" opacity="0.4"/>
+              <rect x="18" y="19" width="12" height="8" rx="1" fill="none" stroke="#d4e4ff" stroke-width="1.2" opacity="0.8"/>
+              <path d="M18 22 L24 25 L30 22" fill="none" stroke="#d4e4ff" stroke-width="1" opacity="0.6"/>
+              <circle cx="24" cy="15" r="3" fill="#d4e4ff" opacity="0.8"/>
+              <path d="M21 15 L24 12 L27 15" fill="none" stroke="#fff" stroke-width="0.8" opacity="0.5"/>
+              <path d="M15 30h18" stroke="#a0bce0" stroke-width="0.6" stroke-dasharray="1.5 2" opacity="0.35"/>
+              <path d="M18 33h12" stroke="#a0bce0" stroke-width="0.6" stroke-dasharray="1.5 2" opacity="0.25"/>
+            </svg>
+          </div>
+          <div class="b-name">Legal Advisor</div>
+          <div class="b-role">↔ Guardian</div>
+        </div>
+      </div>
+
+      <!-- Pair 4: Circuit → Tech Lead -->
+      <div class="pair-col">
+        <div class="b-card digital">
+          <div class="b-icon ic-circuit">
+            <img src="circuit_upscaled_lossless.webp" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover;">
+          </div>
+          <div class="b-name">Circuit</div>
+          <div class="b-role">Technology Intelligence</div>
+        </div>
+        <div class="pair-link"><span class="link-dot"></span></div>
+        <div class="b-card human">
+          <div class="b-icon ic-human ic-human-circuit">
+            <svg viewBox="0 0 48 48">
+              <defs>
+                <radialGradient id="cg" cx="50%" cy="45%" r="55%"><stop offset="0%" stop-color="#d4f0ff"/><stop offset="40%" stop-color="#82c8ff"/><stop offset="100%" stop-color="#2a5a8a"/></radialGradient>
+                <filter id="cgl"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <circle cx="24" cy="24" r="22" fill="#060d1a" stroke="#82c8ff" stroke-width="0.8" opacity="0.6"/>
+              <rect x="10" y="10" width="28" height="28" rx="4" fill="url(#cg)" opacity="0.12"/>
+              <rect x="10" y="10" width="28" height="28" rx="4" fill="none" stroke="url(#cg)" stroke-width="1.2"/>
+              <rect x="15" y="15" width="18" height="18" rx="2" fill="none" stroke="#82c8ff" stroke-width="0.6" opacity="0.45"/>
+              <path d="M3 20h7M3 28h7M38 20h7M38 28h7M20 3v7M28 3v7M20 38v7M28 38v7" stroke="#82c8ff" stroke-width="1.8" stroke-linecap="round" filter="url(#cgl)"/>
+              <circle cx="24" cy="24" r="5" fill="url(#cg)" filter="url(#cgl)"/>
+              <circle cx="24" cy="24" r="3" fill="#d4f0ff" opacity="0.6"/>
+              <path d="M24 19v-4M24 33v-4M19 24h-4M33 24h-4" stroke="#d4f0ff" stroke-width="0.8" opacity="0.5"/>
+              <circle cx="10" cy="20" r="1.5" fill="#82c8ff" opacity="0.5"/>
+              <circle cx="10" cy="28" r="1.5" fill="#82c8ff" opacity="0.5"/>
+              <circle cx="38" cy="20" r="1.5" fill="#82c8ff" opacity="0.5"/>
+              <circle cx="38" cy="28" r="1.5" fill="#82c8ff" opacity="0.5"/>
+              <circle cx="20" cy="10" r="1.5" fill="#82c8ff" opacity="0.5"/>
+              <circle cx="28" cy="10" r="1.5" fill="#82c8ff" opacity="0.5"/>
+              <circle cx="20" cy="38" r="1.5" fill="#82c8ff" opacity="0.5"/>
+              <circle cx="28" cy="38" r="1.5" fill="#82c8ff" opacity="0.5"/>
+            </svg>
+          </div>
+          <div class="b-name">Tech Lead</div>
+          <div class="b-role">↔ Circuit</div>
+        </div>
+      </div>
+
+      <!-- Pair 5: Horizon → Disability Services Pro -->
+      <div class="pair-col">
+        <div class="b-card digital">
+          <div class="b-icon ic-horizon">
+            <img src="horizon.png" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover;">
+          </div>
+          <div class="b-name">Horizon</div>
+          <div class="b-role">IDD Services Intelligence</div>
+        </div>
+        <div class="pair-link"><span class="link-dot"></span></div>
+        <div class="b-card human">
+          <div class="b-icon ic-human ic-human-horizon">
+            <svg viewBox="0 0 48 48">
+              <defs>
+                <radialGradient id="hg" cx="50%" cy="38%" r="58%"><stop offset="0%" stop-color="#ffe4c4"/><stop offset="40%" stop-color="#f5b464"/><stop offset="100%" stop-color="#8a5a1a"/></radialGradient>
+                <filter id="hgl"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <circle cx="24" cy="24" r="22" fill="#1a1208" stroke="#f5b464" stroke-width="0.8" opacity="0.6"/>
+              <circle cx="24" cy="24" r="18" fill="none" stroke="#f5b464" stroke-width="0.4" opacity="0.2"/>
+              <circle cx="24" cy="16" r="6" fill="url(#hg)" filter="url(#hgl)"/>
+              <circle cx="24" cy="16" r="4" fill="#ffe4c4" opacity="0.3"/>
+              <path d="M12 34c0-5.5 5.4-10 12-10s12 4.5 12 34" fill="none" stroke="url(#hg)" stroke-width="1.5" opacity="0.6"/>
+              <path d="M14 38c0-4.5 4.5-8 10-8s10 3.5 10 8" fill="url(#hg)" filter="url(#hgl)" opacity="0.5"/>
+              <path d="M40 26a16 16 0 0 1-32 0" fill="none" stroke="#f5b464" stroke-width="1.8" stroke-linecap="round" filter="url(#hgl)" opacity="0.7"/>
+              <circle cx="12" cy="24" r="1.5" fill="#ffe4c4" opacity="0.6"/>
+              <circle cx="36" cy="24" r="1.5" fill="#ffe4c4" opacity="0.6"/>
+              <path d="M18 28h12" stroke="#ffe4c4" stroke-width="0.6" stroke-dasharray="1.5 2" opacity="0.4"/>
+              <path d="M20 32h8" stroke="#ffe4c4" stroke-width="0.6" stroke-dasharray="1.5 2" opacity="0.3"/>
+            </svg>
+          </div>
+          <div class="b-name">Disability Services Pro</div>
+          <div class="b-role">↔ Horizon</div>
+        </div>
+      </div>
+
+      <!-- Pair 6: Echo → Communications Lead -->
+      <div class="pair-col">
+        <div class="b-card digital">
+          <div class="b-icon ic-echo">
+            <img src="echo_upscaled_lossless.webp" style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover;">
+          </div>
+          <div class="b-name">Echo</div>
+          <div class="b-role">Communications Intelligence</div>
+        </div>
+        <div class="pair-link"><span class="link-dot"></span></div>
+        <div class="b-card human">
+          <div class="b-icon ic-human ic-human-echo">
+            <svg viewBox="0 0 48 48">
+              <defs>
+                <radialGradient id="eg" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#e8d8ff"/><stop offset="40%" stop-color="#b4a0e0"/><stop offset="100%" stop-color="#4a3080"/></radialGradient>
+                <filter id="egl"><feGaussianBlur stdDeviation="1.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <circle cx="24" cy="24" r="22" fill="#0d0a1a" stroke="#b4a0e0" stroke-width="0.8" opacity="0.6"/>
+              <path d="M24 5C13.5 5 5 12.5 5 22c0 4.8 2 9.2 5.5 12.5-.5 3-1.8 5.6-1.8 5.6s5.5-1.5 10-4.3c1.5.4 3.2.7 5.3.7 10.5 0 19-7.5 19-17S34.5 5 24 5z" fill="url(#eg)" filter="url(#egl)" opacity="0.18"/>
+              <path d="M24 8C15 8 8 14 8 22c0 4 1.8 7.6 4.5 10.4-.4 2.4-1.4 4.4-1.4 4.4s4.5-1.2 8.2-3.5c1.3.4 2.8.6 4.7.6 9 0 16-6 16-14S33 8 24 8z" fill="none" stroke="url(#eg)" stroke-width="1.3"/>
+              <path d="M24 12C17.5 12 12 16.5 12 22c0 2.8 1.2 5.3 3.2 7.2" fill="none" stroke="#b4a0e0" stroke-width="0.5" opacity="0.35"/>
+              <circle cx="16" cy="22" r="2.5" fill="url(#eg)" filter="url(#egl)"/>
+              <circle cx="24" cy="22" r="2.5" fill="url(#eg)" filter="url(#egl)"/>
+              <circle cx="32" cy="22" r="2.5" fill="url(#eg)" filter="url(#egl)"/>
+              <circle cx="16" cy="22" r="1.2" fill="#e8d8ff" opacity="0.7"/>
+              <circle cx="24" cy="22" r="1.2" fill="#e8d8ff" opacity="0.7"/>
+              <circle cx="32" cy="22" r="1.2" fill="#e8d8ff" opacity="0.7"/>
+              <path d="M16 22h16" stroke="#e8d8ff" stroke-width="0.4" opacity="0.3" stroke-dasharray="1 2"/>
+            </svg>
+          </div>
+          <div class="b-name">Communications Lead</div>
+          <div class="b-role">↔ Echo</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Founding Executive Council ── -->
+  <div class="founding-council" id="zone-council">
+    <div class="council-divider">
+      <div class="line"></div>
+      <div class="label">Founding Executive Council</div>
+      <div class="line"></div>
+    </div>
+    <div class="council-grid">
+      <div class="council-card">
+        <div class="council-avatar av-wade">WS</div>
+        <div class="council-name">Wade Smith</div>
+        <div class="council-role">Administrative Chair</div>
+      </div>
+      <div class="council-card">
+        <div class="council-avatar av-drew">D</div>
+        <div class="council-name">Drew</div>
+        <div class="council-role">Technical Advisor Chair</div>
+        <div class="council-support">
+          <div class="cs-name">Dalton</div>
+          <div class="cs-role">Infrastructure & Security Chair</div>
+        </div>
+        <div class="council-support" style="border-top: none; margin-top: 4px; padding-top: 0;">
+          <div class="cs-name">Bree</div>
+          <div class="cs-role">QA & UI Chair</div>
+        </div>
+      </div>
+      <div class="council-card">
+        <div class="council-avatar av-cassie">C</div>
+        <div class="council-name">Cassie</div>
+        <div class="council-role">Creative Chair</div>
+        <div class="council-support">
+          <div class="cs-name">Alyssa</div>
+          <div class="cs-role">Creative Support</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Founder AI Agents ── -->
+  <div class="people-section" id="zone-founders" style="margin-top: 50px; text-align: center; position: relative; z-index: 2;">
+    <div style="font-size: 0.85rem; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 24px; background: linear-gradient(to right, var(--amber-soft), var(--magenta), var(--cyan-light), var(--gold), var(--amber-soft)); background-size: 200% auto; animation: neon-shimmer 5s linear infinite; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Founder AI Agents</div>
+    <img src="people.png" alt="The 6 Founder AI Agents" style="width: 100%; max-width: 800px; height: auto; display: block; margin: 0 auto; mix-blend-mode: screen; -webkit-mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 85%); mask-image: radial-gradient(ellipse 65% 65% at 50% 50%, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 85%);">
+  </div>
+
+  <!-- ── Legend ── -->
+  <div class="legend">
+    <div class="leg"><span class="dot d1"></span> Individual</div>
+    <div class="leg"><span class="dot d2"></span> Anchor</div>
+    <div class="leg"><span class="dot d3"></span> Network</div>
+    <div class="leg"><span class="dot dh"></span> ROOMI Hub</div>
+    <div class="leg"><span class="ln solid"></span> Support Flow</div>
+    <div class="leg"><span class="ln dashed"></span> Governance</div>
+  </div>
+
+  <div class="footer">ROOMI · Dignity-First Universe</div>
+
+</div>
+
+<script>
+// ── Mobile detection — drives all performance gates ──
+const isMobile = window.innerWidth <= 820 || ('ontouchstart' in window && window.innerWidth < 1024);
+
+// ── Cinematic Telescope Starfield ──
+(() => {
+  const c = document.getElementById('starfield');
+  const ctx = c.getContext('2d');
+  let stars = [];
+  const N = isMobile ? 300 : 850;
+  const HUES = [210, 230, 195, 40, 175, 280, 200, 35, 260, 160, 220, 50];
+
+  function resize() {
+    c.width = window.innerWidth;
+    c.height = isMobile ? window.innerHeight : Math.max(document.body.scrollHeight, window.innerHeight);
+    init();
+  }
+  function init() {
+    stars = Array.from({ length: N }, () => {
+      const roll = Math.random();
+      const isBright = isMobile ? (roll < 0.06) : (roll < 0.15);
+      return {
+        x: Math.random() * c.width,
+        y: Math.random() * c.height,
+        r: isBright ? (Math.random() * 1.2 + 0.4) : (Math.random() * 0.5 + 0.08),
+        a: isBright ? (Math.random() * 0.35 + 0.35) : (Math.random() * 0.25 + 0.06),
+        s: Math.random() * 0.0004 + 0.00006,
+        p: Math.random() * Math.PI * 2,
+        hue: HUES[Math.floor(Math.random() * HUES.length)],
+        bright: isBright
+      };
+    });
+  }
+  function draw(t) {
+    ctx.clearRect(0, 0, c.width, c.height);
+    for (const s of stars) {
+      const alpha = s.a * (0.5 + 0.5 * Math.sin(t * s.s + s.p));
+      // Crisp flat dots — zero shadowBlur, zero glow
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = s.bright
+        ? `hsla(${s.hue}, 30%, 90%, ${alpha})`
+        : `rgba(215,225,240,${alpha})`;
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(draw);
+})();
+
+// ── Luminous Energy Beam Connections ──
+function drawConnections() {
+  const svg = document.getElementById('conn-svg');
+  const eco = document.getElementById('eco');
+  const ecoRect = eco.getBoundingClientRect();
+
+  function center(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - ecoRect.left, y: r.top + r.height / 2 - ecoRect.top };
+  }
+  function bottom(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - ecoRect.left, y: r.bottom - ecoRect.top };
+  }
+  function top_(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - ecoRect.left, y: r.top - ecoRect.top };
+  }
+
+  svg.setAttribute('width', eco.offsetWidth);
+  svg.setAttribute('height', eco.offsetHeight);
+
+  // Preserve filter defs, clear lines
+  const defs = svg.querySelector('defs');
+  svg.innerHTML = '';
+  svg.appendChild(defs);
+
+  const indEl = document.querySelector('.tier-individual');  // anchor from BOTTOM of entire section, below tags
+  const anchorEl = document.getElementById('wing-anchor');
+  const networkEl = document.getElementById('wing-network');
+  const hubEl = document.querySelector('.hub-core');
+  const govEl = document.getElementById('zone-gov');
+
+  if (!indEl || !anchorEl || !networkEl || !hubEl || !govEl) return;
+
+  const indB = bottom(indEl);
+  const ancT = top_(anchorEl);
+  const netT = top_(networkEl);
+  const ancC = center(anchorEl);
+  const netC = center(networkEl);
+  const hubT = top_(hubEl);
+  const hubB = bottom(hubEl);
+  const govT = top_(govEl);
+
+  // Ribbon beam: multiple overlapping colored paths = twisted neon stream effect
+  function ribbonBeam(x1, y1, x2, y2, colors, widths, offsets) {
+    const cp1y = y1 + (y2 - y1) * 0.62; // control points pulled 62% for graceful arc
+    const cp2y = y2 - (y2 - y1) * 0.62;
+    for (let i = 0; i < colors.length; i++) {
+      const ox = offsets[i] || 0;
+      const d = `M${x1+ox},${y1} C${x1+ox},${cp1y} ${x2+ox},${cp2y} ${x2+ox},${y2}`;
+      // Wide glow
+      const glow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      glow.setAttribute('d', d);
+      glow.setAttribute('fill', 'none');
+      glow.setAttribute('stroke', colors[i].glow);
+      glow.setAttribute('stroke-width', widths[i] * 3);
+      glow.setAttribute('stroke-linecap', 'round');
+      glow.setAttribute('filter', 'url(#beam-glow-strong)');
+      glow.style.opacity = colors[i].glowOp;
+      svg.appendChild(glow);
+      // Core
+      const core = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      core.setAttribute('d', d);
+      core.setAttribute('fill', 'none');
+      core.setAttribute('stroke', colors[i].core);
+      core.setAttribute('stroke-width', widths[i]);
+      core.setAttribute('stroke-linecap', 'round');
+      core.style.opacity = colors[i].coreOp;
+      svg.appendChild(core);
+    }
+  }
+
+  // Dashed governance line
+  function dashedBeam(x1, y1, x2, y2, color) {
+    const midY = (y1 + y2) / 2;
+    const d = `M${x1},${y1} C${x1},${midY} ${x2},${midY} ${x2},${y2}`;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    line.setAttribute('d', d);
+    line.setAttribute('fill', 'none');
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', '1');
+    line.setAttribute('stroke-dasharray', '5 4');
+    line.setAttribute('stroke-linecap', 'round');
+    line.style.opacity = '0.22';
+    svg.appendChild(line);
+  }
+
+  // Individual → Anchor — simplified rose/magenta ribbon
+  ribbonBeam(indB.x, indB.y + 10, ancT.x, ancT.y - 2,
+    [
+      { core: 'rgba(244,160,184,0.85)', glow: 'rgba(232,101,138,0.5)', coreOp: '0.65', glowOp: '0.08' },
+      { core: 'rgba(217,70,239,0.6)',  glow: 'rgba(217,70,239,0.35)',  coreOp: '0.4', glowOp: '0.05' }
+    ],
+    [1.4, 0.7],
+    [0, 2]
+  );
+
+  // Individual → Network — simplified cyan/teal ribbon
+  ribbonBeam(indB.x, indB.y + 10, netT.x, netT.y - 2,
+    [
+      { core: 'rgba(142,232,226,0.85)', glow: 'rgba(78,205,196,0.5)',  coreOp: '0.65', glowOp: '0.08' },
+      { core: 'rgba(34,197,120,0.6)',  glow: 'rgba(34,197,120,0.35)',  coreOp: '0.4', glowOp: '0.05' }
+    ],
+    [1.4, 0.7],
+    [0, -2]
+  );
+
+  // Anchor → Hub — cleaner violet/magenta convergence
+  const ancBtm = { x: ancC.x, y: ancC.y + anchorEl.offsetHeight / 2 + 4 };
+  ribbonBeam(ancBtm.x, ancBtm.y, hubT.x - 16, hubT.y - 2,
+    [
+      { core: 'rgba(220,180,255,0.9)', glow: 'rgba(180,130,255,0.5)', coreOp: '0.7', glowOp: '0.14' },
+      { core: 'rgba(217,70,239,0.7)',  glow: 'rgba(217,70,239,0.4)',  coreOp: '0.5', glowOp: '0.08' },
+      { core: 'rgba(245,166,35,0.4)', glow: 'rgba(245,166,35,0.3)',  coreOp: '0.3', glowOp: '0.05' }
+    ],
+    [2.2, 1.2, 0.6],
+    [0, 4, -4]
+  );
+
+  // Network → Hub — cleaner violet/cyan convergence
+  const netBtm = { x: netC.x, y: netC.y + networkEl.offsetHeight / 2 + 4 };
+  ribbonBeam(netBtm.x, netBtm.y, hubT.x + 16, hubT.y - 2,
+    [
+      { core: 'rgba(220,180,255,0.9)', glow: 'rgba(180,130,255,0.5)', coreOp: '0.7', glowOp: '0.14' },
+      { core: 'rgba(78,205,196,0.7)',  glow: 'rgba(78,205,196,0.4)',  coreOp: '0.5', glowOp: '0.08' },
+      { core: 'rgba(245,166,35,0.4)', glow: 'rgba(245,166,35,0.3)',  coreOp: '0.3', glowOp: '0.05' }
+    ],
+    [2.2, 1.2, 0.6],
+    [0, -4, 4]
+  );
+
+  // Hub → Governance (subtle dashed)
+  dashedBeam(hubB.x, hubB.y + 2, govT.x, govT.y - 2, 'rgba(91,155,213,0.4)');
+
+  // Governance → Founding Executive Council
+  const councilEl = document.getElementById('zone-council');
+  if (councilEl) {
+    const govB = bottom(govEl);
+    const cncT = top_(councilEl);
+    const cncC = center(councilEl);
+
+    // Governance → Council (amber/gold ribbon)
+    ribbonBeam(govB.x, govB.y + 2, cncT.x, cncT.y - 2,
+      [
+        { core: 'rgba(245,200,100,0.8)', glow: 'rgba(245,180,70,0.6)', coreOp: '0.6', glowOp: '0.14' },
+        { core: 'rgba(91,155,213,0.5)', glow: 'rgba(91,155,213,0.4)', coreOp: '0.4', glowOp: '0.08' }
+      ],
+      [1.4, 0.7],
+      [0, 0]
+    );
+
+    // Fan 3 beams to the 3 council cards
+    const cards = councilEl.querySelectorAll('.council-card');
+    if (cards.length === 3) {
+      const ecoRect = document.querySelector('.eco-map').getBoundingClientRect();
+      const colors = [
+        { core: 'rgba(91,155,213,0.85)',  glow: 'rgba(91,155,213,0.6)',  coreOp: '0.65', glowOp: '0.12' },
+        { core: 'rgba(78,205,196,0.85)',  glow: 'rgba(78,205,196,0.6)',  coreOp: '0.65', glowOp: '0.12' },
+        { core: 'rgba(217,70,239,0.85)',  glow: 'rgba(217,70,239,0.6)',  coreOp: '0.65', glowOp: '0.12' }
+      ];
+      cards.forEach((card, i) => {
+        const cr = card.getBoundingClientRect();
+        const tx = cr.left - ecoRect.left + cr.width / 2;
+        const ty = cr.top - ecoRect.top;
+        ribbonBeam(cncC.x, cncT.y + 16, tx, ty,
+          [colors[i]],
+          [1.0],
+          [0]
+        );
+      });
+    }
+
+    // Founding Executive Council → The People
+    const peopleEl = document.getElementById('zone-people');
+    if (peopleEl) {
+      const pplT = top_(peopleEl);
+      const encB = bottom(councilEl);
+      ribbonBeam(encB.x, encB.y + 2, pplT.x, pplT.y - 12,
+        [
+          { core: 'rgba(78,205,196,0.8)', glow: 'rgba(78,205,196,0.5)', coreOp: '0.6', glowOp: '0.1' },
+          { core: 'rgba(217,70,239,0.7)', glow: 'rgba(217,70,239,0.4)', coreOp: '0.5', glowOp: '0.08' },
+          { core: 'rgba(91,155,213,0.6)', glow: 'rgba(91,155,213,0.3)', coreOp: '0.4', glowOp: '0.05' }
+        ],
+        [2.0, 1.2, 0.6],
+        [0, 3, -3]
+      );
+    }
+  }
+}
+
+// ── Painted Nebula Canvas — organic cosmic depth layer ──
+(() => {
+  const c = document.getElementById('nebula-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+
+  function paint() {
+    // Mobile: skip expensive canvas nebula — CSS nebula layers handle atmosphere
+    if (isMobile) return;
+    c.width = window.innerWidth;
+    c.height = Math.max(document.body.scrollHeight, window.innerHeight);
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.globalCompositeOperation = 'screen';
+
+    const W = c.width, H = c.height;
+    const cx = W / 2;
+
+    // Draw organic elliptical nebula blob
+    function blob(x, y, rx, ry, r, g, b, alpha) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(1, ry / rx);
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+      grad.addColorStop(0,   `rgba(${r},${g},${b},${alpha})`);
+      grad.addColorStop(0.45,`rgba(${r},${g},${b},${alpha * 0.4})`);
+      grad.addColorStop(0.75,`rgba(${r},${g},${b},${alpha * 0.1})`);
+      grad.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, rx, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Teal-green upper atmosphere
+    blob(cx, H * -0.05, W * 0.60, H * 0.32,   20, 160, 140, 0.04);
+    // Deep blue-green upper left
+    blob(cx * 0.10, H * 0.10, W * 0.45, H * 0.28,  15, 140, 120, 0.02);
+    // Cyan upper right
+    blob(cx * 1.90, H * 0.10, W * 0.45, H * 0.28,  30, 170, 200, 0.02);
+    // Amber warmth — Individual zone
+    blob(cx, H * 0.18, W * 0.28, H * 0.16,  255, 200, 60,  0.04);
+    // Rose left atmosphere
+    blob(cx * 0.12, H * 0.28, W * 0.40, H * 0.22, 220, 80, 130, 0.02);
+    // Cyan right atmosphere
+    blob(cx * 1.88, H * 0.28, W * 0.40, H * 0.22,  40, 190, 190, 0.02);
+    // Hub zone — very faint
+    blob(cx, H * 0.55, W * 0.56, H * 0.32,  210, 60, 250, 0.03);
+    // Violet mid-Hub
+    blob(cx, H * 0.55, W * 0.38, H * 0.22,  150, 100, 230, 0.02);
+    // Deep teal lower-right
+    blob(cx * 1.65, H * 0.65, W * 0.35, H * 0.20,   20, 170, 165, 0.02);
+    // Deep green lower-left
+    blob(cx * 0.35, H * 0.62, W * 0.32, H * 0.18,   15, 155,  85, 0.01);
+    // Blue bottom center atmosphere
+    blob(cx, H * 0.85, W * 0.45, H * 0.20,   60, 110, 210, 0.01);
+    // Faint base glow
+    blob(cx, H * 1.02, W * 0.60, H * 0.22,  190, 140, 255, 0.01);
+  }
+
+  function onLoad() { paint(); }
+  window.addEventListener('resize', paint);
+  if (document.readyState === 'loading') {
+    window.addEventListener('load', onLoad);
+  } else {
+    onLoad();
+  }
+})();
+
+window.addEventListener('load', () => { setTimeout(drawConnections, 200); });
+window.addEventListener('resize', () => { requestAnimationFrame(drawConnections); });
+</script>
+
+</body>
+</html>

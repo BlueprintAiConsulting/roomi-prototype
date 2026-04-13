@@ -1,0 +1,24 @@
+/* ── Universe Page — Full-viewport iframe embed ── */
+
+.universe-page {
+  position: fixed;
+  inset: 0;
+  top: 56px; /* below navbar */
+  z-index: 1;
+  background: #010206;
+}
+
+.universe-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #010206;
+  display: block;
+}
+
+/* Mobile: shrink top offset for smaller navbar */
+@media (max-width: 520px) {
+  .universe-page {
+    top: 48px;
+  }
+}

@@ -6,6 +6,7 @@ export default function Navbar({ currentView, onNavigate, onOpenOnboarding }) {
 
   const navItems = [
     { id: 'landing', label: 'Home' },
+    { id: 'universe', label: 'Universe' },
     { id: 'chat', label: 'Try ROOMI' },
     { id: 'anchor', label: 'Anchor View' },
   ];
