@@ -156,3 +156,24 @@
     padding: 14px 24px;
   }
 }
+
+/* Reset Demo button */
+.btn-reset-demo {
+  background: none;
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  color: rgba(255, 130, 130, 0.8);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  letter-spacing: 0.5px;
+}
+
+.btn-reset-demo:hover {
+  background: rgba(255, 100, 100, 0.1);
+  border-color: rgba(255, 100, 100, 0.5);
+  color: #ff8888;
+}

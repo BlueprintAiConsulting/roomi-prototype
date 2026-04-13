@@ -93,10 +93,10 @@ export default function Onboarding({ onClose, onComplete }) {
   };
 
   return (
-    <div className="onboard-overlay" onClick={onClose}>
-      <div className="onboard-modal" onClick={e => e.stopPropagation()}>
+    <div className="onboard-overlay" onClick={onClose} role="presentation">
+      <div className="onboard-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Onboarding step ${currentStep + 1} of ${onboardingSteps.length}: ${step.title}`}>
         {/* Progress bar */}
-        <div className="onboard-progress">
+        <div className="onboard-progress" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin="0" aria-valuemax="100" aria-label={`Onboarding progress: ${Math.round(progress)}%`}>
           <div className="onboard-progress-bar" style={{ width: `${progress}%` }} />
         </div>
 

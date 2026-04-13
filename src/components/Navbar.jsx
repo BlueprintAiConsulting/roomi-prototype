@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './Navbar.css';
 
-export default function Navbar({ currentView, onNavigate, onOpenOnboarding }) {
+export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onResetDemo, hasActiveDemo }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
@@ -29,6 +29,15 @@ export default function Navbar({ currentView, onNavigate, onOpenOnboarding }) {
               {item.label}
             </button>
           ))}
+          {hasActiveDemo && (
+            <button
+              className="btn btn-reset-demo"
+              onClick={() => { onResetDemo(); setMobileOpen(false); }}
+              aria-label="Reset demo and return to start"
+            >
+              ↺ Reset Demo
+            </button>
+          )}
           <button className="btn btn-primary btn-sm" onClick={() => { onOpenOnboarding(); setMobileOpen(false); }}>
             Get Started
           </button>
@@ -47,3 +56,4 @@ export default function Navbar({ currentView, onNavigate, onOpenOnboarding }) {
     </nav>
   );
 }
+

@@ -13,6 +13,7 @@ export default function App() {
   const [transitioning, setTransitioning] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [resetKey, setResetKey] = useState(0); // forces ChatInterface remount
   const mainRef = useRef(null);
 
   const handleNavigate = useCallback((view) => {
@@ -46,10 +47,17 @@ export default function App() {
     handleNavigate('chat');
   }, [handleNavigate]);
 
+  const handleResetDemo = useCallback(() => {
+    setUserData(null);
+    setShowOnboarding(false);
+    setResetKey(k => k + 1); // force ChatInterface to remount fresh
+    handleNavigate('landing');
+  }, [handleNavigate]);
+
   const renderView = () => {
     switch (displayedView) {
       case 'chat':
-        return <ChatInterface userData={userData} />;
+        return <ChatInterface key={resetKey} userData={userData} />;
       case 'anchor':
         return <AnchorView />;
       case 'universe':
@@ -67,18 +75,31 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* Skip-to-content link for keyboard users */}
+      <a href="#main-content" className="skip-to-content">
+        Skip to main content
+      </a>
+
       <Navbar
         currentView={currentView}
         onNavigate={handleNavigate}
         onOpenOnboarding={handleOpenOnboarding}
+        onResetDemo={handleResetDemo}
+        hasActiveDemo={!!userData}
       />
 
       <main
+        id="main-content"
         ref={mainRef}
+        role="main"
+        aria-label={`ROOMI ${displayedView === 'chat' ? 'Chat' : displayedView === 'anchor' ? 'Anchor View' : displayedView === 'universe' ? 'Universe' : 'Home'}`}
         className={`main-content ${transitioning ? 'main-content--exit' : 'main-content--enter'}`}
       >
         {renderView()}
       </main>
+
+      {/* Screen reader announcements */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only" id="sr-announcements" />
 
       {showOnboarding && (
         <Onboarding

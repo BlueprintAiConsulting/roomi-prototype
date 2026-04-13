@@ -25,7 +25,7 @@
   --bg-card-solid: #161628;
   --text-primary: #FFF8E7;
   --text-secondary: rgba(255, 248, 231, 0.68);
-  --text-muted: rgba(255, 248, 231, 0.38);
+  --text-muted: rgba(255, 248, 231, 0.5);
   --border-subtle: rgba(255, 179, 0, 0.12);
   --border-glow: rgba(0, 144, 157, 0.25);
 
@@ -90,6 +90,66 @@ body {
   color: var(--text-primary);
   line-height: 1.6;
   overflow-x: hidden;
+}
+
+/* ============================================
+   Accessibility
+   ============================================ */
+
+/* Skip to content link (screen reader + keyboard) */
+.skip-to-content {
+  position: absolute;
+  top: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--amber-primary);
+  color: var(--deep-navy);
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+  z-index: 10000;
+  text-decoration: none;
+  transition: top var(--transition-fast);
+}
+
+.skip-to-content:focus {
+  top: 12px;
+}
+
+/* Focus visible outlines for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--amber-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Remove outline for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Reduced motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Scrollbar */

@@ -556,7 +556,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
             </div>
           )}
 
-          <div className="chat-body" ref={chatBodyRef}>
+          <div className="chat-body" ref={chatBodyRef} role="log" aria-label="Conversation with ROOMI" aria-live="polite">
             <div className="chat-date-badge">
               <span>Today with ROOMI</span>
             </div>
@@ -582,13 +582,13 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
             ))}
 
             {isTyping && (
-              <div className="chat-msg chat-msg--roomi">
+              <div className="chat-msg chat-msg--roomi" aria-label="ROOMI is typing">
                 <div className="chat-msg-avatar">
                   <span>🦊</span>
                 </div>
                 <div className="chat-msg-content">
                   <div className="chat-msg-bubble typing-bubble">
-                    <div className="typing-dots">
+                    <div className="typing-dots" role="status" aria-label="ROOMI is thinking">
                       <span />
                       <span />
                       <span />
@@ -624,6 +624,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
                 type="text"
                 className="chat-input"
                 placeholder="Type a message to ROOMI…"
+                aria-label="Message to ROOMI"
                 value={inputValue}
                 onChange={e => setInputValue(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendDemo()}
@@ -632,6 +633,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
                 className="chat-send-btn"
                 onClick={handleSendDemo}
                 disabled={!inputValue.trim() || isTyping}
+                aria-label="Send message"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13" />

@@ -915,27 +915,59 @@
       background: rgba(12,16,32,0.85);
     }
     .council-avatar {
-      width: 36px; height: 36px;
-      margin: 0 auto 8px;
+      width: 56px; height: 56px;
+      margin: 0 auto 10px;
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 0.7rem; font-weight: 700;
       letter-spacing: 0.02em;
+      overflow: hidden;
+      position: relative;
+    }
+    .council-avatar img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+    .council-avatar .avatar-fallback {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; font-weight: 700;
     }
     .council-avatar.av-wade {
       background: rgba(91,155,213,0.15);
-      border: 1.5px solid rgba(91,155,213,0.40);
+      border: 2px solid rgba(91,155,213,0.40);
       color: rgba(91,155,213,0.90);
     }
     .council-avatar.av-drew {
       background: rgba(78,205,196,0.15);
-      border: 1.5px solid rgba(78,205,196,0.40);
+      border: 2px solid rgba(78,205,196,0.40);
       color: rgba(78,205,196,0.90);
     }
     .council-avatar.av-cassie {
       background: rgba(217,70,239,0.15);
-      border: 1.5px solid rgba(217,70,239,0.40);
+      border: 2px solid rgba(217,70,239,0.40);
       color: rgba(217,70,239,0.90);
+    }
+    .council-avatar.av-dalton {
+      background: rgba(245,166,35,0.15);
+      border: 2px solid rgba(245,166,35,0.40);
+      color: rgba(245,166,35,0.90);
+    }
+    .council-avatar.av-bree {
+      background: rgba(232,101,138,0.15);
+      border: 2px solid rgba(232,101,138,0.40);
+      color: rgba(232,101,138,0.90);
+    }
+    .council-avatar.av-alyssa {
+      background: rgba(180,160,224,0.15);
+      border: 2px solid rgba(180,160,224,0.40);
+      color: rgba(180,160,224,0.90);
+    }
+    .council-support .council-avatar {
+      width: 32px; height: 32px;
+      margin: 0 auto 6px;
+      font-size: 0.55rem;
     }
     .council-name {
       font-size: 0.85rem; font-weight: 600;
@@ -1439,19 +1471,33 @@
     </div>
     <div class="council-grid">
       <div class="council-card">
-        <div class="council-avatar av-wade">WS</div>
+        <div class="council-avatar av-wade">
+          <img src="headshots/wade.jpg" alt="Wade Smith" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <span class="avatar-fallback" style="display:none">WS</span>
+        </div>
         <div class="council-name">Wade Smith</div>
         <div class="council-role">Administrative Chair</div>
       </div>
       <div class="council-card">
-        <div class="council-avatar av-drew">D</div>
+        <div class="council-avatar av-drew">
+          <img src="headshots/drew.jpg" alt="Drew" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <span class="avatar-fallback" style="display:none">D</span>
+        </div>
         <div class="council-name">Drew</div>
         <div class="council-role">Technical Advisor Chair</div>
         <div class="council-support">
+          <div class="council-avatar av-dalton">
+            <img src="headshots/dalton.jpg" alt="Dalton" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <span class="avatar-fallback" style="display:none">DL</span>
+          </div>
           <div class="cs-name">Dalton</div>
-          <div class="cs-role">Infrastructure & Security Chair</div>
+          <div class="cs-role">Infrastructure &amp; Security Chair</div>
         </div>
         <div class="council-support" style="border-top: none; margin-top: 4px; padding-top: 0;">
+          <div class="council-avatar av-bree">
+            <img src="headshots/bree.jpg" alt="Bree" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <span class="avatar-fallback" style="display:none">B</span>
+          </div>
           <div class="cs-name">Bree</div>
           <div class="cs-role">QA & UI Chair</div>
         </div>
