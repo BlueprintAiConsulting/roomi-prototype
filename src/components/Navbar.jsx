@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import './Navbar.css';
 
-export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onResetDemo, hasActiveDemo }) {
+export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onResetDemo, onLogout, hasActiveDemo, isAuthenticated, userName }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
@@ -38,9 +38,22 @@ export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onRe
               ↺ Reset Demo
             </button>
           )}
-          <button className="btn btn-primary btn-sm" onClick={() => { onOpenOnboarding(); setMobileOpen(false); }}>
-            Get Started
-          </button>
+          {isAuthenticated ? (
+            <div className="navbar-user-group">
+              {userName && <span className="navbar-user-name">{userName}</span>}
+              <button
+                className="btn btn-logout"
+                onClick={() => { onLogout(); setMobileOpen(false); }}
+                aria-label="Sign out"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <button className="btn btn-primary btn-sm" onClick={() => { onOpenOnboarding(); setMobileOpen(false); }}>
+              Get Started
+            </button>
+          )}
         </div>
 
         <button
@@ -56,4 +69,3 @@ export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onRe
     </nav>
   );
 }
-

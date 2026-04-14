@@ -1,32 +1,54 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
+import { getUserProfile, saveUserProfile } from './hooks/useFirestore.js';
 import Navbar from './components/Navbar.jsx';
 import Landing from './components/Landing.jsx';
 import ChatInterface from './components/ChatInterface.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import AnchorView from './components/AnchorView.jsx';
 import Universe from './components/Universe.jsx';
+import Login from './components/Login.jsx';
 import './App.css';
 
-export default function App() {
+function AppContent() {
+  const { user, loading, isAuthenticated, isDemoMode, logout } = useAuth();
   const [currentView, setCurrentView] = useState('landing');
   const [displayedView, setDisplayedView] = useState('landing');
   const [transitioning, setTransitioning] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [userData, setUserData] = useState(null);
-  const [resetKey, setResetKey] = useState(0); // forces ChatInterface remount
+  const [resetKey, setResetKey] = useState(0);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const mainRef = useRef(null);
+
+  // Load user profile from Firestore on auth
+  useEffect(() => {
+    if (!isAuthenticated || isDemoMode || profileLoaded) return;
+
+    async function loadProfile() {
+      const profile = await getUserProfile(user.uid);
+      if (profile) {
+        setUserData(profile);
+      }
+      setProfileLoaded(true);
+    }
+    loadProfile();
+  }, [isAuthenticated, isDemoMode, user, profileLoaded]);
+
+  // Reset profileLoaded when user changes
+  useEffect(() => {
+    setProfileLoaded(false);
+  }, [user?.uid]);
 
   const handleNavigate = useCallback((view) => {
     if (view === currentView) return;
     setTransitioning(true);
 
-    // Fade out
     setTimeout(() => {
       setCurrentView(view);
       setDisplayedView(view);
       window.scrollTo({ top: 0 });
 
-      // Fade in
       requestAnimationFrame(() => {
         setTransitioning(false);
       });
@@ -41,25 +63,57 @@ export default function App() {
     setShowOnboarding(false);
   }, []);
 
-  const handleOnboardingComplete = useCallback((data) => {
+  const handleOnboardingComplete = useCallback(async (data) => {
     setUserData(data);
     setShowOnboarding(false);
+
+    // Save profile to Firestore if authenticated
+    if (isAuthenticated && user?.uid) {
+      await saveUserProfile(user.uid, {
+        ...data,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
     handleNavigate('chat');
-  }, [handleNavigate]);
+  }, [handleNavigate, isAuthenticated, user]);
 
   const handleResetDemo = useCallback(() => {
     setUserData(null);
     setShowOnboarding(false);
-    setResetKey(k => k + 1); // force ChatInterface to remount fresh
+    setResetKey(k => k + 1);
     handleNavigate('landing');
   }, [handleNavigate]);
+
+  const handleLogout = useCallback(async () => {
+    await logout();
+    setUserData(null);
+    setProfileLoaded(false);
+    setResetKey(k => k + 1);
+    handleNavigate('landing');
+  }, [logout, handleNavigate]);
+
+  // Show loading spinner while auth initializes
+  if (loading) {
+    return (
+      <div className="app-loading">
+        <div className="app-loading-fox">🦊</div>
+        <div className="app-loading-text">Loading ROOMI…</div>
+      </div>
+    );
+  }
+
+  // Show login if not authenticated and Firebase is configured
+  if (!isAuthenticated && !isDemoMode) {
+    return <Login />;
+  }
 
   const renderView = () => {
     switch (displayedView) {
       case 'chat':
-        return <ChatInterface key={resetKey} userData={userData} />;
+        return <ChatInterface key={resetKey} userData={userData} userId={user?.uid} />;
       case 'anchor':
-        return <AnchorView />;
+        return <AnchorView userId={user?.uid} />;
       case 'universe':
         return <Universe />;
       case 'landing':
@@ -75,7 +129,6 @@ export default function App() {
 
   return (
     <div className="app">
-      {/* Skip-to-content link for keyboard users */}
       <a href="#main-content" className="skip-to-content">
         Skip to main content
       </a>
@@ -85,7 +138,10 @@ export default function App() {
         onNavigate={handleNavigate}
         onOpenOnboarding={handleOpenOnboarding}
         onResetDemo={handleResetDemo}
+        onLogout={handleLogout}
         hasActiveDemo={!!userData}
+        isAuthenticated={isAuthenticated}
+        userName={user?.displayName || userData?.preferredName}
       />
 
       <main
@@ -98,7 +154,6 @@ export default function App() {
         {renderView()}
       </main>
 
-      {/* Screen reader announcements */}
       <div aria-live="polite" aria-atomic="true" className="sr-only" id="sr-announcements" />
 
       {showOnboarding && (
@@ -108,5 +163,13 @@ export default function App() {
         />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

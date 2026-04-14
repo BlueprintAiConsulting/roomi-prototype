@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { demoConversations, dailySchedule, userProfile } from '../data/sampleData.js';
+import { saveConversation } from '../hooks/useFirestore.js';
 import VoiceMode from './VoiceMode.jsx';
 import './ChatInterface.css';
 
@@ -44,7 +45,7 @@ function playNotificationSound() {
   }
 }
 
-export default function ChatInterface({ userData }) {
+export default function ChatInterface({ userData, userId }) {
   const [activeScenario, setActiveScenario] = useState('morning');
   const [messages, setMessages] = useState([]);
   const [displayedCount, setDisplayedCount] = useState(0);
@@ -391,8 +392,14 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
       conversationHistoryRef.current.push({ role: 'model', parts: [{ text: roomiText }] });
 
       setIsTyping(false);
+      const updatedMessages = [...messages, { sender: 'user', text: userText, id: Date.now() }, { sender: 'roomi', text: roomiText, id: Date.now() + 1 }];
       setMessages(prev => [...prev, { sender: 'roomi', text: roomiText, id: Date.now() + 1 }]);
       playNotificationSound();
+
+      // Persist to Firestore
+      if (userId) {
+        saveConversation(userId, activeScenario, updatedMessages);
+      }
     } catch (err) {
       setIsTyping(false);
       const fallback = `I'm here, ${userName}. What's on your mind? 🦊`;

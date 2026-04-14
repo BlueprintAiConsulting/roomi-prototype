@@ -28,3 +28,30 @@
     transform: translateY(0);
   }
 }
+
+/* Loading state */
+.app-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  gap: var(--space-md);
+}
+
+.app-loading-fox {
+  font-size: 3rem;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.app-loading-text {
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.7; }
+}
