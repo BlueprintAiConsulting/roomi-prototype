@@ -11,7 +11,7 @@ import Login from './components/Login.jsx';
 import './App.css';
 
 function AppContent() {
-  const { user, loading, isAuthenticated, isDemoMode, logout } = useAuth();
+  const { user, role, loading, isAuthenticated, isCaregiver, isDemoMode, logout } = useAuth();
   const [currentView, setCurrentView] = useState('landing');
   const [displayedView, setDisplayedView] = useState('landing');
   const [transitioning, setTransitioning] = useState(false);
@@ -39,6 +39,13 @@ function AppContent() {
   useEffect(() => {
     setProfileLoaded(false);
   }, [user?.uid]);
+
+  // Auto-route caregivers to Anchor View when they log in
+  useEffect(() => {
+    if (isCaregiver && currentView === 'landing') {
+      handleNavigate('anchor');
+    }
+  }, [isCaregiver, currentView]);
 
   const handleNavigate = useCallback((view) => {
     if (view === currentView) return;
@@ -141,6 +148,7 @@ function AppContent() {
         onLogout={handleLogout}
         hasActiveDemo={!!userData}
         isAuthenticated={isAuthenticated}
+        isCaregiver={isCaregiver}
         userName={user?.displayName || userData?.preferredName}
       />
 
