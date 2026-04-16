@@ -6,19 +6,43 @@ import { createRoomiSession } from './roomiSession.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const ALLOWED_ORIGINS = [
+  'https://blueprintaiconsulting.github.io',
+  'http://localhost:5173',
+  'http://localhost:3001',
+  'http://localhost:3002',
+];
 
-app.use((_, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+// Track active connections
+let activeConnections = 0;
+const serverStartTime = Date.now();
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
+  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
   next();
 });
 
-app.get('/health', (_, res) => res.json({ status: 'ok', service: 'roomi-voice' }));
+app.get('/health', (_, res) => res.json({
+  status: 'ok',
+  service: 'roomi-voice',
+  uptime: Math.floor((Date.now() - serverStartTime) / 1000),
+  activeConnections,
+  memory: process.memoryUsage().heapUsed,
+  model: 'gemini-2.5-flash-native-audio-latest',
+}));
 
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer });
 
+
 wss.on('connection', (ws) => {
   console.log('[ws] Client connected');
+  activeConnections++;
   let session = null;
 
   ws.on('message', async (data, isBinary) => {
@@ -29,8 +53,9 @@ wss.on('connection', (ws) => {
 
         if (msg.type === 'init') {
           const voice = msg.voice || 'Aoede';
-          console.log(`[ws] Init session — voice: ${voice}`);
-          session = await createRoomiSession(ws, voice);
+          const userData = msg.userData || {};
+          console.log(`[ws] Init session — voice: ${voice}, user: ${userData.preferredName || 'guest'}`);
+          session = await createRoomiSession(ws, voice, userData);
           if (ws.readyState === 1) {
             ws.send(JSON.stringify({ type: 'ready', voice }));
           }
@@ -57,6 +82,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     console.log('[ws] Client disconnected');
+    activeConnections = Math.max(0, activeConnections - 1);
     if (session) {
       try { session.close(); } catch (_) {}
       session = null;
