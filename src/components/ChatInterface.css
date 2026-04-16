@@ -644,6 +644,37 @@
   50% { opacity: 0.4; transform: scale(0.7); }
 }
 
+/* Offline Banner */
+.chat-offline-banner {
+  padding: 10px var(--space-lg);
+  background: linear-gradient(90deg, rgba(255, 87, 34, 0.12), rgba(255, 87, 34, 0.06));
+  border-bottom: 1px solid rgba(255, 87, 34, 0.2);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: #ff9800;
+  text-align: center;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Rate Limit Banner */
+.chat-rate-limit-banner {
+  padding: 10px var(--space-lg);
+  background: linear-gradient(90deg, rgba(0, 144, 157, 0.12), rgba(0, 144, 157, 0.06));
+  border-bottom: 1px solid rgba(0, 144, 157, 0.2);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--teal-light);
+  text-align: center;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Offline status dot */
+.chat-status-dot--offline {
+  background: #ff5722;
+  box-shadow: 0 0 6px rgba(255, 87, 34, 0.5);
+  animation: thinking-pulse 2s ease-in-out infinite;
+}
+
 /* Mobile sidebar overlay */
 .chat-sidebar-overlay {
   display: none;
