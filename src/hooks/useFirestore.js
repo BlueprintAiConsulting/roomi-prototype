@@ -15,6 +15,52 @@ import {
   limit,
 } from '../firebase.js';
 
+// ─── Roles ──────────────────────────────────────────────────
+// role: 'resident' | 'caregiver'
+// Caregivers have a `residents` array of resident UIDs they oversee
+
+export async function getUserRole(uid) {
+  if (!db) return null;
+  try {
+    const snap = await getDoc(doc(db, 'userRoles', uid));
+    return snap.exists() ? snap.data() : null;
+  } catch (err) {
+    console.error('Error getting user role:', err);
+    return null;
+  }
+}
+
+export async function setUserRole(uid, role, extra = {}) {
+  if (!db) return;
+  try {
+    await setDoc(doc(db, 'userRoles', uid), {
+      uid,
+      role,
+      ...extra,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.error('Error setting user role:', err);
+  }
+}
+
+// Get all residents a caregiver is linked to
+export async function getCaregiverResidents(caregiverUid) {
+  if (!db) return [];
+  try {
+    const q = query(
+      collection(db, 'userRoles'),
+      where('role', '==', 'resident'),
+      where('caregiverUids', 'array-contains', caregiverUid)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error('Error loading caregiver residents:', err);
+    return [];
+  }
+}
+
 // ─── User Profiles ──────────────────────────────────────────
 
 export async function saveUserProfile(uid, data) {
