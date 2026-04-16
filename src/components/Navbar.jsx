@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import './Navbar.css';
 
-export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onResetDemo, onLogout, hasActiveDemo, isAuthenticated, userName }) {
+export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onResetDemo, onLogout, hasActiveDemo, isAuthenticated, isCaregiver, userName }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navItems = [
-    { id: 'landing', label: 'Home' },
-    { id: 'universe', label: 'Universe' },
-    { id: 'chat', label: 'Try ROOMI' },
-    { id: 'anchor', label: 'Anchor View' },
-  ];
+  // Caregivers only see Anchor View + Universe; residents see everything
+  const navItems = isCaregiver
+    ? [
+        { id: 'anchor', label: '🏠 Anchor View' },
+        { id: 'universe', label: 'Universe' },
+      ]
+    : [
+        { id: 'landing', label: 'Home' },
+        { id: 'universe', label: 'Universe' },
+        { id: 'chat', label: 'Try ROOMI' },
+        { id: 'anchor', label: 'Anchor View' },
+      ];
 
   return (
     <nav className="navbar" id="main-nav">
