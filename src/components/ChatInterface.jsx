@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { demoConversations, dailySchedule, userProfile } from '../data/sampleData.js';
 import { saveConversation } from '../hooks/useFirestore.js';
 import VoiceMode from './VoiceMode.jsx';
+import NotificationPrompt from './NotificationPrompt.jsx';
 import './ChatInterface.css';
 
 const SCENARIOS = [
@@ -55,6 +56,8 @@ export default function ChatInterface({ userData, userId }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
   const [scheduleItems, setScheduleItems] = useState(dailySchedule.map(item => ({ ...item })));
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+  const [notifPromptShown, setNotifPromptShown] = useState(false);
   const messagesEndRef = useRef(null);
   const chatBodyRef = useRef(null);
   const conversationHistoryRef = useRef([]); // keeps context across messages
@@ -400,6 +403,12 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
       if (userId) {
         saveConversation(userId, activeScenario, updatedMessages);
       }
+
+      // Show notification opt-in after first AI response (once per session)
+      if (!notifPromptShown && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        setTimeout(() => setShowNotifPrompt(true), 1200);
+        setNotifPromptShown(true);
+      }
     } catch (err) {
       setIsTyping(false);
       const fallback = `I'm here, ${userName}. What's on your mind? 🦊`;
@@ -530,6 +539,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
               <VoiceMode
                 onExit={() => setVoiceMode(false)}
                 userName={fullName}
+                userData={userData}
               />
             </div>
           )}
@@ -607,6 +617,15 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
 
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Notification opt-in prompt — shown once after first AI response */}
+          {showNotifPrompt && (
+            <NotificationPrompt
+              userId={userId}
+              userName={userName}
+              onDismiss={() => setShowNotifPrompt(false)}
+            />
+          )}
 
           <div className="chat-input-area">
             {/* Quick Reply Chips */}
