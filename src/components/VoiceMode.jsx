@@ -11,7 +11,7 @@ const VOICE_OPTIONS = [
 const WS_URL = import.meta.env.VITE_VOICE_WS_URL || 'ws://localhost:3001';
 const GEMINI_SAMPLE_RATE = 24000; // Gemini Live outputs at 24kHz
 
-export default function VoiceMode({ onExit, userName }) {
+export default function VoiceMode({ onExit, userName, userData }) {
   const [selectedVoice, setSelectedVoice] = useState('Aoede');
   const [status, setStatus] = useState('idle'); // idle | connecting | listening | speaking | error
   const [transcript, setTranscript] = useState([]);
@@ -102,7 +102,12 @@ export default function VoiceMode({ onExit, userName }) {
     ws.binaryType = 'arraybuffer';
 
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'init', voice: selectedVoice }));
+      // Send init with voice selection + userData for personalization
+      ws.send(JSON.stringify({
+        type: 'init',
+        voice: selectedVoice,
+        userData: userData || {},
+      }));
     };
 
     ws.onmessage = async (event) => {
