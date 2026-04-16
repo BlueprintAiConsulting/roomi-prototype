@@ -125,3 +125,29 @@
     transform: translateY(0);
   }
 }
+
+/* Caregiver portal link */
+.login-caregiver-link {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.login-caregiver-btn {
+  background: none;
+  border: none;
+  color: rgba(106, 176, 255, 0.6);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-base);
+  letter-spacing: 0.3px;
+}
+
+.login-caregiver-btn:hover {
+  color: #6ab0ff;
+  background: rgba(106, 176, 255, 0.06);
+}
