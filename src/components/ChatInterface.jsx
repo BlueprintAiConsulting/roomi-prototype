@@ -905,7 +905,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
             ))}
           </div>
 
-          {/* Voice Mode overlay */}
+          {/* Voice Mode — PAUSED (re-enable when voice server is production-ready)
           {voiceMode && (
             <div className="voice-mode-overlay">
               <VoiceMode
@@ -915,6 +915,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
               />
             </div>
           )}
+          */}
 
           {/* Schedule Overlay */}
           {showSchedule && (
