@@ -261,6 +261,114 @@
   color: var(--teal-light);
 }
 
+/* Medication Input */
+.onboard-med-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: var(--space-md);
+}
+
+.onboard-med-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 14px;
+  background: rgba(0, 155, 176, 0.08);
+  border: 1px solid rgba(0, 155, 176, 0.2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+}
+
+.onboard-med-chip-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.onboard-med-chip-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.onboard-med-chip-time {
+  font-size: var(--font-size-xs);
+  color: var(--teal-light);
+  font-weight: 600;
+}
+
+.onboard-med-chip-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+
+.onboard-med-chip-remove:hover {
+  color: #ff5722;
+  background: rgba(255, 87, 34, 0.1);
+}
+
+.onboard-med-add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.onboard-med-name-input {
+  text-align: left;
+  font-size: var(--font-size-base) !important;
+}
+
+.onboard-med-time-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.onboard-med-time-label {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.onboard-med-time-select {
+  flex: 1;
+  padding: 10px 14px;
+  background: var(--bg-card-solid);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.onboard-med-time-select:focus {
+  border-color: var(--amber-primary);
+}
+
+.onboard-med-add-btn {
+  flex-shrink: 0;
+  min-width: 70px;
+}
+
+.onboard-med-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-top: var(--space-sm);
+  font-style: italic;
+}
+
 /* Summary */
 .onboard-summary {
   margin-top: var(--space-lg);

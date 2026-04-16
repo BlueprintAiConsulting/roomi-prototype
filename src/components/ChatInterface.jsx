@@ -11,6 +11,7 @@ const SCENARIOS = [
   { id: 'overwhelm',  label: '💙 Support',  name: 'A Hard Moment',      icon: '💙', short: 'Support'  },
   { id: 'schedule',   label: '📋 Schedule', name: 'Schedule Review',    icon: '📋', short: 'Schedule' },
   { id: 'reflection', label: '🌙 Reflect',  name: 'Evening Reflection', icon: '🌙', short: 'Evening'  },
+  { id: 'freeChat',   label: '💬 Talk',     name: 'Just Talk',          icon: '💬', short: 'Talk'     },
 ];
 
 const QUICK_REPLIES = {
@@ -19,7 +20,16 @@ const QUICK_REPLIES = {
   overwhelm:  ['I need a moment', "Let's prep together", "I'm okay now"],
   schedule:   ["What's left today?", "I'm on track", 'Can we adjust something?'],
   reflection: ['It was a good day', 'Pretty tough today', "I'd say a 4"],
+  freeChat:   ['How are you? 🦊', "Tell me something fun", "What should I do today?"],
 };
+
+// Format timestamp for messages
+function formatTime(id) {
+  if (!id || typeof id !== 'number') return 'just now';
+  const d = new Date(id);
+  if (isNaN(d.getTime())) return 'just now';
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
 
 // Generate a soft notification sound using Web Audio API
 function playNotificationSound() {
@@ -55,6 +65,7 @@ export default function ChatInterface({ userData, userId }) {
   const [showSchedule, setShowSchedule] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [scheduleItems, setScheduleItems] = useState(dailySchedule.map(item => ({ ...item })));
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
   const [notifPromptShown, setNotifPromptShown] = useState(false);
@@ -415,7 +426,8 @@ export default function ChatInterface({ userData, userId }) {
     medication: `You are helping with a medication check-in. Their meds: ${userMeds.map(m => `${m.name} ${m.dosage}`).join(' and ')}, both at ${userMeds[0]?.time || '8:00 AM'}. Confirm when taken, encourage breakfast. NEVER suggest changing dose, skipping, or taking extra. If they say they feel weird from meds, say "That sounds important — tell ${anchorFirstName} or your doctor about that."`,
     overwhelm:  `The user is stressed or overwhelmed. This is a SUPPORT moment. Follow this exact protocol:\n1. VALIDATE: "That makes sense" or "I hear you"\n2. GROUND: Offer a breathing exercise — "In for 4, hold for 4, out for 6"\n3. WAIT: Don't rush to fix. Ask "What's the hardest part right now?"\n4. OPTIONS: Offer 2-3 simple, concrete choices. Let THEM choose.\n5. If they mention being scared of a person or situation, say: "That sounds really important. Can we call ${anchorFirstName} together?"`,
     schedule:   `Reviewing the schedule together. Schedule: ${dailySchedule.map(i => `${i.time} ${i.activity}`).join(' • ')}. Affirm progress. If they want to skip something, don't judge — help them adjust.`,
-    reflection: `Evening wind-down. Ask how the day went, best part, mood rating 1-5. Be reflective, warm. If they had a hard day, validate it: "Hard days count too. You still showed up." Never pressure a higher rating.`
+    reflection: `Evening wind-down. Ask how the day went, best part, mood rating 1-5. Be reflective, warm. If they had a hard day, validate it: "Hard days count too. You still showed up." Never pressure a higher rating.`,
+    freeChat:   `Open, casual conversation. No specific agenda. Just be a warm, familiar presence. Follow their lead — if they want to chat about their day, their interests, or just hang out, go with it. Keep it light and natural.`
   };
 
   // Build personal facts section
@@ -960,10 +972,37 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
             </div>
           )}
 
-          <div className="chat-body" ref={chatBodyRef} role="log" aria-label="Conversation with ROOMI" aria-live="polite">
+          <div className="chat-body" ref={chatBodyRef} role="log" aria-label="Conversation with ROOMI" aria-live="polite"
+            onScroll={(e) => {
+              const el = e.target;
+              const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+              setShowScrollBtn(!atBottom && messages.length > 3);
+            }}
+          >
             <div className="chat-date-badge">
               <span>Today with ROOMI</span>
             </div>
+
+            {/* Welcome card — shown before any messages */}
+            {messages.length === 0 && !isTyping && (
+              <div className="chat-welcome-card">
+                <div className="chat-welcome-fox">🦊</div>
+                <h3 className="chat-welcome-title">Hey{userName ? `, ${userName}` : ''}!</h3>
+                <p className="chat-welcome-text">Pick a topic from the sidebar, or just start typing. I'm right here.</p>
+                <div className="chat-welcome-topics">
+                  {SCENARIOS.map(s => (
+                    <button
+                      key={s.id}
+                      className={`chat-welcome-topic ${activeScenario === s.id ? 'chat-welcome-topic--active' : ''}`}
+                      onClick={() => setActiveScenario(s.id)}
+                    >
+                      <span>{s.icon}</span>
+                      <span>{s.short}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {messages.map((msg) => (
               <div
@@ -979,7 +1018,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
                 <div className="chat-msg-content">
                   <div className="chat-msg-bubble">{msg.text}</div>
                   <div className="chat-msg-time">
-                    {msg.sender === 'roomi' ? 'ROOMI' : fullName} · just now
+                    {msg.sender === 'roomi' ? 'ROOMI' : fullName} · {formatTime(msg.id)}
                   </div>
                 </div>
               </div>
@@ -1004,6 +1043,17 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
 
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Scroll to bottom FAB */}
+          {showScrollBtn && (
+            <button
+              className="chat-scroll-fab"
+              onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              aria-label="Scroll to latest messages"
+            >
+              ↓
+            </button>
+          )}
 
           {/* Notification opt-in prompt — shown once after first AI response */}
           {showNotifPrompt && (

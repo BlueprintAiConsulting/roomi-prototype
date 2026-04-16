@@ -53,10 +53,12 @@ export const demoConversations = {
     { sender: 'user', text: 'roomi i\'m really stressed right now' },
     { sender: 'roomi', text: 'I\'m here. That\'s okay. Can you take one slow breath with me? 💙' },
     { sender: 'roomi', text: '🫁 In for 4… hold for 4… out for 6.\n\nDon\'t rush. I\'m not going anywhere.' },
-    { sender: 'user', text: 'the video call is really stressing me out' },
-    { sender: 'roomi', text: 'That makes sense. Video calls can feel like a lot. Here\'s what we could do:\n\n1. 📝 Prep 2–3 things you want to say, together\n2. 🎧 I can help you write a quick script\n3. 📅 We could see if rescheduling is an option\n\nWhat feels most right?' },
+    { sender: 'user', text: 'okay. the video call is really stressing me out' },
+    { sender: 'roomi', text: 'That makes sense. Video calls can feel like a lot. What\'s the hardest part about it right now?' },
+    { sender: 'user', text: 'i don\'t know what to say' },
+    { sender: 'roomi', text: 'Totally fair. Here\'s what we could do:\n\n1. 📝 Prep 2–3 things you want to say, together\n2. 🎧 I can help you write a quick script\n3. 📅 We could see if rescheduling is an option\n\nWhat feels most right?' },
     { sender: 'user', text: 'let\'s prep together' },
-    { sender: 'roomi', text: 'Let\'s do it. Tell me what the call is about and we\'ll figure out 2–3 things you want to say. That\'s all you need.' },
+    { sender: 'roomi', text: 'Let\'s do it. Tell me what the call is about and we\'ll figure out 2–3 things you want to say. That\'s all you need. 🦊' },
   ],
   schedule: [
     { sender: 'user', text: 'what\'s left today' },
@@ -73,6 +75,9 @@ export const demoConversations = {
     { sender: 'roomi', text: 'Two things that are just for you. That balance matters. 💛\n\nHow would you rate today, 1–5?' },
     { sender: 'user', text: '4. pretty solid.' },
     { sender: 'roomi', text: 'Four stars — that sounds right. You showed up for yourself today. Rest well, Cass. I\'ll be here in the morning. 🦊🌙' },
+  ],
+  freeChat: [
+    { sender: 'roomi', text: 'Hey Cass. No agenda, no schedule — just us. What\'s on your mind? 🦊' },
   ],
 };
 
@@ -122,7 +127,7 @@ export const onboardingSteps = [
   {
     id: 'welcome',
     title: 'Welcome to ROOMI',
-    subtitle: "I\'m a daily companion — not a tracker, not an app. Just someone in your corner. This takes about a minute.",
+    subtitle: "I'm a daily companion — not a tracker, not an app. Just someone in your corner. This takes about a minute.",
     field: null,
   },
   {
@@ -138,21 +143,34 @@ export const onboardingSteps = [
     field: { type: 'time-select', key: 'wakeTime', options: ['6:00 AM', '6:30 AM', '7:00 AM', '7:30 AM', '8:00 AM', '8:30 AM', '9:00 AM', '9:30 AM', '10:00 AM'] },
   },
   {
+    id: 'anchor',
+    title: 'Who\'s your go-to person?',
+    subtitle: "A parent, caregiver, or someone you trust — the person you'd call if you needed help.",
+    field: { type: 'text', placeholder: 'e.g., Mom, Dad, my sister Sarah', key: 'anchorName' },
+  },
+  {
     id: 'medication',
     title: 'Any daily medications?',
     subtitle: "Totally optional. If you want, I can give you a nudge each morning.",
     field: { type: 'toggle', key: 'hasMedications', label: 'Yes, I\'d like reminders' },
   },
   {
+    id: 'medicationDetails',
+    title: 'What do you take?',
+    subtitle: "Just the name and when — I'll remember.",
+    field: { type: 'medication-input', key: 'medications' },
+    showIf: 'hasMedications',
+  },
+  {
     id: 'facts',
-    title: 'Tell me one thing about you',
+    title: 'Tell me something about you',
     subtitle: 'A hobby, a pet, a favorite food — anything. It helps me know you better.',
     field: { type: 'text', placeholder: 'e.g., I love drawing, I have a cat named Biscuit', key: 'personalFact' },
   },
   {
     id: 'ready',
-    title: "You\'re all set.",
-    subtitle: "I\'m ready when you are. This is your space — let\'s make it work for you.",
+    title: "You're all set.",
+    subtitle: "I'm ready when you are. This is your space — let's make it work for you.",
     field: null,
   },
 ];

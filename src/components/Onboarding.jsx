@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { onboardingSteps } from '../data/sampleData.js';
 import './Onboarding.css';
 
@@ -7,16 +7,27 @@ export default function Onboarding({ onClose, onComplete }) {
   const [formData, setFormData] = useState({
     preferredName: '',
     wakeTime: '',
+    anchorName: '',
     hasMedications: false,
+    medications: [],
     personalFact: '',
   });
   const [direction, setDirection] = useState('forward');
+  const [medInput, setMedInput] = useState({ name: '', time: '8:00 AM' });
 
-  const step = onboardingSteps[currentStep];
+  // Filter steps based on conditional showIf logic
+  const activeSteps = useMemo(() => {
+    return onboardingSteps.filter(step => {
+      if (!step.showIf) return true;
+      return formData[step.showIf];
+    });
+  }, [formData]);
+
+  const step = activeSteps[currentStep];
   const isFirst = currentStep === 0;
-  const isLast = currentStep === onboardingSteps.length - 1;
-  const progress = ((currentStep + 1) / onboardingSteps.length) * 100;
-  const isOptional = step.field && ['wakeTime', 'hasMedications', 'personalFact'].includes(step.field.key);
+  const isLast = currentStep === activeSteps.length - 1;
+  const progress = ((currentStep + 1) / activeSteps.length) * 100;
+  const isOptional = step?.field && ['wakeTime', 'hasMedications', 'personalFact', 'anchorName', 'medications'].includes(step.field.key);
 
   const handleNext = () => {
     if (isLast) {
@@ -24,20 +35,46 @@ export default function Onboarding({ onClose, onComplete }) {
       return;
     }
     setDirection('forward');
-    setCurrentStep(prev => prev + 1);
+    setCurrentStep(prev => Math.min(prev + 1, activeSteps.length - 1));
   };
 
   const handleBack = () => {
     setDirection('back');
-    setCurrentStep(prev => prev - 1);
+    setCurrentStep(prev => Math.max(prev - 1, 0));
   };
 
   const updateField = (key, value) => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
+  const addMedication = () => {
+    if (!medInput.name.trim()) return;
+    const newMed = {
+      name: medInput.name.trim(),
+      time: medInput.time,
+      dosage: '',
+    };
+    setFormData(prev => ({
+      ...prev,
+      medications: [...prev.medications, newMed],
+    }));
+    setMedInput({ name: '', time: '8:00 AM' });
+  };
+
+  const removeMedication = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      medications: prev.medications.filter((_, i) => i !== index),
+    }));
+  };
+
+  const medTimeOptions = [
+    '6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM',
+    '12:00 PM', '2:00 PM', '4:00 PM', '6:00 PM', '8:00 PM', '10:00 PM',
+  ];
+
   const renderField = () => {
-    if (!step.field) return null;
+    if (!step?.field) return null;
 
     switch (step.field.type) {
       case 'text':
@@ -87,14 +124,77 @@ export default function Onboarding({ onClose, onComplete }) {
           </div>
         );
 
+      case 'medication-input':
+        return (
+          <div className="onboard-field">
+            {/* Already added medications */}
+            {formData.medications.length > 0 && (
+              <div className="onboard-med-list">
+                {formData.medications.map((med, i) => (
+                  <div key={i} className="onboard-med-chip">
+                    <span className="onboard-med-chip-icon">💊</span>
+                    <span className="onboard-med-chip-name">{med.name}</span>
+                    <span className="onboard-med-chip-time">{med.time}</span>
+                    <button
+                      className="onboard-med-chip-remove"
+                      onClick={() => removeMedication(i)}
+                      aria-label={`Remove ${med.name}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add medication input */}
+            <div className="onboard-med-add">
+              <input
+                type="text"
+                className="onboard-input onboard-med-name-input"
+                placeholder="Medication name (e.g., Lamotrigine 100mg)"
+                value={medInput.name}
+                onChange={e => setMedInput(prev => ({ ...prev, name: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && addMedication()}
+                autoFocus
+              />
+              <div className="onboard-med-time-row">
+                <span className="onboard-med-time-label">When?</span>
+                <select
+                  className="onboard-med-time-select"
+                  value={medInput.time}
+                  onChange={e => setMedInput(prev => ({ ...prev, time: e.target.value }))}
+                >
+                  {medTimeOptions.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+                <button
+                  className="btn btn-teal btn-sm onboard-med-add-btn"
+                  onClick={addMedication}
+                  disabled={!medInput.name.trim()}
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            {formData.medications.length === 0 && (
+              <p className="onboard-med-hint">Add your medications one at a time — or skip if you're not sure.</p>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }
   };
 
+  if (!step) return null;
+
   return (
     <div className="onboard-overlay" onClick={onClose} role="presentation">
-      <div className="onboard-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Onboarding step ${currentStep + 1} of ${onboardingSteps.length}: ${step.title}`}>
+      <div className="onboard-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Onboarding step ${currentStep + 1} of ${activeSteps.length}: ${step.title}`}>
         {/* Progress bar */}
         <div className="onboard-progress" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin="0" aria-valuemax="100" aria-label={`Onboarding progress: ${Math.round(progress)}%`}>
           <div className="onboard-progress-bar" style={{ width: `${progress}%` }} />
@@ -108,7 +208,7 @@ export default function Onboarding({ onClose, onComplete }) {
         </button>
 
         {/* Step content */}
-        <div className={`onboard-content onboard-content--${direction}`} key={currentStep}>
+        <div className={`onboard-content onboard-content--${direction}`} key={step.id}>
           {/* Fox avatar */}
           <div className="onboard-fox-wrapper">
             <div className="onboard-fox-glow" />
@@ -117,7 +217,7 @@ export default function Onboarding({ onClose, onComplete }) {
 
           {/* Step indicator */}
           <div className="onboard-step-indicator">
-            {onboardingSteps.map((_, i) => (
+            {activeSteps.map((_, i) => (
               <span
                 key={i}
                 className={`onboard-dot ${i === currentStep ? 'onboard-dot--active' : ''} ${i < currentStep ? 'onboard-dot--completed' : ''}`}
@@ -143,7 +243,19 @@ export default function Onboarding({ onClose, onComplete }) {
                   <span>Morning check-in at <strong>{formData.wakeTime}</strong></span>
                 </div>
               )}
-              {formData.hasMedications && (
+              {formData.anchorName && (
+                <div className="onboard-summary-item">
+                  <span className="onboard-summary-icon">🏠</span>
+                  <span>Your go-to person: <strong>{formData.anchorName}</strong></span>
+                </div>
+              )}
+              {formData.medications.length > 0 && (
+                <div className="onboard-summary-item">
+                  <span className="onboard-summary-icon">💊</span>
+                  <span>{formData.medications.map(m => m.name).join(', ')} — I'll remind you</span>
+                </div>
+              )}
+              {formData.hasMedications && formData.medications.length === 0 && (
                 <div className="onboard-summary-item">
                   <span className="onboard-summary-icon">💊</span>
                   <span>I'll send you a gentle reminder each morning</span>
