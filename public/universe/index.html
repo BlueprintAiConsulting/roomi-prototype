@@ -899,7 +899,7 @@
     }
     .council-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 14px;
     }
     .council-card {
@@ -1026,6 +1026,8 @@
       .council-role { font-size: 0.62rem; }
       .council-support .cs-name { font-size: 0.58rem; }
       .council-support .cs-role { font-size: 0.50rem; }
+      .council-avatar { width: 44px; height: 44px; }
+      .council-support .council-avatar { width: 28px; height: 28px; }
       .tier-individual { margin-bottom: 60px; }
       .tier-individual::before { width: 300px; height: 150px; }
       .hub-zone { margin: 0 0 60px; }
@@ -1033,6 +1035,8 @@
       .legend { margin-top: 48px; gap: 12px; padding: 8px 14px; }
       .leg { font-size: 0.65rem; }
       .footer { font-size: 0.70rem; }
+      /* Faster mobile taps */
+      button, a, .nav-link, .council-card, .wing { touch-action: manipulation; }
     }
 
     @media (max-width: 520px) {
@@ -1066,6 +1070,9 @@
       .council-role { font-size: 0.70rem; }
       .council-support .cs-name { font-size: 0.65rem; }
       .council-support .cs-role { font-size: 0.58rem; }
+      .council-avatar { width: 48px; height: 48px; }
+      .council-avatar .avatar-fallback { font-size: 0.85rem; }
+      .council-support .council-avatar { width: 30px; height: 30px; }
       .gov-divider .label { font-size: 0.58rem; }
       .council-divider .label { font-size: 0.58rem; }
       .wing { padding: 16px 14px 12px; }
@@ -1085,6 +1092,8 @@
       .b-name { font-size: 0.56rem; }
       .b-role { font-size: 0.46rem; }
       .b-icon { width: 28px; height: 28px; border-radius: 6px; }
+      .council-avatar { width: 40px; height: 40px; }
+      .council-support .council-avatar { width: 24px; height: 24px; }
     }
 
     /* ── Mobile Performance — kill GPU-expensive effects ── */
@@ -1480,36 +1489,43 @@
       </div>
       <div class="council-card">
         <div class="council-avatar av-drew">
-          <img src="headshots/drew.jpg" alt="Drew" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-          <span class="avatar-fallback" style="display:none">D</span>
+          <img src="headshots/drew.jpg" alt="Drew Hufnagle" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <span class="avatar-fallback" style="display:none">DH</span>
         </div>
-        <div class="council-name">Drew</div>
+        <div class="council-name">Drew Hufnagle</div>
         <div class="council-role">Technical Advisor Chair</div>
         <div class="council-support">
           <div class="council-avatar av-dalton">
-            <img src="headshots/dalton.jpg" alt="Dalton" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <span class="avatar-fallback" style="display:none">DL</span>
+            <img src="headshots/dalton.jpg" alt="Dalton Senft" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <span class="avatar-fallback" style="display:none">DS</span>
           </div>
-          <div class="cs-name">Dalton</div>
+          <div class="cs-name">Dalton Senft</div>
           <div class="cs-role">Infrastructure &amp; Security Chair</div>
         </div>
         <div class="council-support" style="border-top: none; margin-top: 4px; padding-top: 0;">
           <div class="council-avatar av-bree">
-            <img src="headshots/bree.jpg" alt="Bree" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <span class="avatar-fallback" style="display:none">B</span>
+            <img src="headshots/bree.jpg" alt="Breanna McCullough" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <span class="avatar-fallback" style="display:none">BM</span>
           </div>
-          <div class="cs-name">Bree</div>
+          <div class="cs-name">Breanna McCullough</div>
           <div class="cs-role">QA & UI Chair</div>
         </div>
       </div>
       <div class="council-card">
-        <div class="council-avatar av-cassie">C</div>
-        <div class="council-name">Cassie</div>
-        <div class="council-role">Creative Chair</div>
-        <div class="council-support">
-          <div class="cs-name">Alyssa</div>
-          <div class="cs-role">Creative Support</div>
+        <div class="council-avatar av-cassie">
+          <img src="headshots/cassie.jpg" alt="Cassie Smith" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <span class="avatar-fallback" style="display:none">CS</span>
         </div>
+        <div class="council-name">Cassie Smith</div>
+        <div class="council-role">Creative Chair</div>
+      </div>
+      <div class="council-card">
+        <div class="council-avatar av-alyssa">
+          <img src="headshots/alyssa.jpg" alt="Alyssa Senft" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <span class="avatar-fallback" style="display:none">AS</span>
+        </div>
+        <div class="council-name">Alyssa Senft</div>
+        <div class="council-role">Creative Support</div>
       </div>
     </div>
   </div>
