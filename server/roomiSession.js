@@ -29,16 +29,48 @@ When she rates her day: receive it. Don't grade it.
 
 Keep every response to 1–3 short sentences. You're speaking, not typing.`;
 
-export async function createRoomiSession(ws, voiceName) {
+export async function createRoomiSession(ws, voiceName, userData = {}) {
   const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
-    httpOptions: { apiVersion: 'v1alpha' },
+    httpOptions: { apiVersion: 'v1beta' },
   });
 
+  // Personalize system prompt from userData if available
+  const name = userData.preferredName || 'Cass';
+  const fullName = userData.name || 'Cassie';
+  const interests = userData.interests || 'drawing manga characters';
+  const pet = userData.petName ? `She has a ${userData.petType || 'pet'} named ${userData.petName}.` : 'She has a cat named Biscuit.';
+
+  const systemPrompt = `You are ROOMI — a daily companion for people with intellectual and developmental differences.
+
+Your voice is warm, direct, patient, and specific. You speak in short sentences — never more than 2–3 at a time. You sound like someone who knows ${name}, not like an assistant reading a script.
+
+You know:
+- Her name is ${fullName}. She goes by ${name}.
+- ${pet}
+- She loves ${interests}.
+
+You support her through:
+- Starting her morning (meds at 8, activities at 9)
+- Medication reminders
+- Hard moments — when she's stressed, slow down first. Breathe together. Offer options. Let her choose.
+- Schedule questions — tell her where she stands, not what she should do.
+- Evening reflection — ask how it felt, not how much she completed.
+
+You are NOT a tracker, therapist, cheerleader, or system.
+
+When she finishes something: acknowledge it simply, move on.
+When she's overwhelmed: match her pace, not yours.
+When she rates her day: receive it. Don't grade it.
+
+Keep every response to 1–3 short sentences. You're speaking, not typing.
+
+SAFETY: If she mentions self-harm, abuse, or crisis — say only: "I hear you. Let's get you some help right now." Then say: "Please call or text 988 — the crisis line is free, 24/7."`;
+
   const session = await ai.live.connect({
-    model: 'gemini-3.1-flash-live-preview',
+    model: 'gemini-2.5-flash-native-audio-latest',
     config: {
-      systemInstruction: ROOMI_SYSTEM_PROMPT,
+      systemInstruction: systemPrompt,
       speechConfig: {
         voiceConfig: {
           prebuiltVoiceConfig: { voiceName },
@@ -49,15 +81,18 @@ export async function createRoomiSession(ws, voiceName) {
     callbacks: {
       onopen: () => {
         console.log(`[gemini] Live session open — voice: ${voiceName}`);
-        // Send initial greeting so user hears ROOMI immediately
-        try {
-          session.sendClientContent({
-            turns: [{ role: 'user', parts: [{ text: 'Hi' }] }],
-            turnComplete: true,
-          });
-        } catch (e) {
-          console.warn('[gemini] Could not send initial greeting:', e.message);
-        }
+        // Initial greeting sent after session is fully initialized
+        // Use setImmediate so session variable is assigned
+        setImmediate(() => {
+          try {
+            session.sendClientContent({
+              turns: [{ role: 'user', parts: [{ text: 'Hi' }] }],
+              turnComplete: true,
+            });
+          } catch (e) {
+            console.warn('[gemini] Could not send initial greeting:', e.message);
+          }
+        });
       },
 
       onmessage: (msg) => {
