@@ -1,4 +1,4 @@
-// useAuth.js — Firebase Authentication hook for ROOMI
+// useAuth.jsx — Firebase Authentication hook for ROOMI
 import { useState, useEffect, useCallback, createContext, useContext } from 'react';
 import {
   auth,
@@ -8,23 +8,33 @@ import {
   onAuthStateChanged,
   signOut as firebaseSignOut,
 } from '../firebase.js';
+import { getUserRole, setUserRole } from './useFirestore.js';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null); // 'resident' | 'caregiver' | null
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!auth) {
-      // Firebase not configured — demo mode
       setLoading(false);
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+
+      if (firebaseUser && !firebaseUser.isAnonymous) {
+        // Load role from Firestore
+        const roleDoc = await getUserRole(firebaseUser.uid);
+        setRole(roleDoc?.role || null);
+      } else {
+        setRole(null);
+      }
+
       setLoading(false);
     }, (err) => {
       console.error('Auth state error:', err);
@@ -48,6 +58,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Sign in as resident (anonymous guest)
   const signInAnonymously = useCallback(async () => {
     if (!auth) return null;
     try {
@@ -61,11 +72,24 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Claim caregiver role after Google sign-in
+  const claimCaregiverRole = useCallback(async (uid) => {
+    await setUserRole(uid, 'caregiver');
+    setRole('caregiver');
+  }, []);
+
+  // Claim resident role after onboarding
+  const claimResidentRole = useCallback(async (uid) => {
+    await setUserRole(uid, 'resident');
+    setRole('resident');
+  }, []);
+
   const logout = useCallback(async () => {
     if (!auth) return;
     try {
       await firebaseSignOut(auth);
       setUser(null);
+      setRole(null);
     } catch (err) {
       console.error('Sign-out error:', err);
     }
@@ -73,13 +97,18 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    role,
     loading,
     error,
     isAuthenticated: !!user,
     isAnonymous: user?.isAnonymous ?? false,
-    isDemoMode: !auth, // Firebase not configured
+    isCaregiver: role === 'caregiver',
+    isResident: role === 'resident' || user?.isAnonymous,
+    isDemoMode: !auth,
     signInWithGoogle,
     signInAnonymously,
+    claimCaregiverRole,
+    claimResidentRole,
     logout,
   };
 
