@@ -6,7 +6,7 @@ import { createRoomiSession } from './roomiSession.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash-preview-04-17';
+const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-1.5-flash-latest';
 const ALLOWED_ORIGINS = [
   'https://blueprintaiconsulting.github.io',
   'http://localhost:5173',
@@ -78,7 +78,7 @@ app.post('/api/chat', async (req, res) => {
       return res.status(500).json({ error: 'Server configuration error.' });
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
 
     const geminiBody = {
       system_instruction: { parts: [{ text: systemPrompt }] },
@@ -151,7 +151,7 @@ app.post('/api/summarize', async (req, res) => {
 Conversation:
 ${transcript}`;
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
 
     const geminiRes = await fetch(endpoint, {
       method: 'POST',
