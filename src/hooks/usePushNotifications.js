@@ -1,6 +1,6 @@
 // usePushNotifications.js — Web Push notification hook for ROOMI
-// Uses the Notifications API for local scheduled reminders
-// Stores FCM tokens in Firestore for future server-side pushes
+// Uses Service Worker for persistent background notifications (survives tab close)
+// Falls back to local setTimeout-based notifications if SW unavailable
 
 import { useState, useEffect, useCallback } from 'react';
 import { db, doc, setDoc, serverTimestamp } from '../firebase.js';
@@ -12,25 +12,41 @@ const ROOMI_SCHEDULE = [
     hour: 9,
     minute: 0,
     title: '🦊 Good morning from ROOMI!',
-    body: 'Ready to start your day? Let\'s check in! 🌅',
+    body: "Ready to start your day? Let's check in! 🌅",
   },
   {
     id: 'midday',
     hour: 12,
     minute: 30,
     title: '🦊 Midday check-in',
-    body: 'How\'s your day going? ROOMI is here if you need anything 😊',
+    body: "How's your day going? ROOMI is here if you need anything 😊",
   },
   {
     id: 'evening',
     hour: 19,
     minute: 0,
     title: '🦊 Evening wrap-up',
-    body: 'How did today go? Share how you\'re feeling with ROOMI 🌙',
+    body: "How did today go? Share how you're feeling with ROOMI 🌙",
   },
 ];
 
-// Save FCM token to Firestore for future server-side pushes
+// ── Service Worker registration ──────────────────────────────
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return null;
+  try {
+    const reg = await navigator.serviceWorker.register(
+      `${import.meta.env.BASE_URL}sw.js`,
+      { scope: import.meta.env.BASE_URL }
+    );
+    console.log('[SW] Registered:', reg.scope);
+    return reg;
+  } catch (err) {
+    console.warn('[SW] Registration failed:', err);
+    return null;
+  }
+}
+
+// ── Save token to Firestore ──────────────────────────────────
 async function saveFcmToken(uid, token) {
   if (!db || !uid) return;
   try {
@@ -45,16 +61,14 @@ async function saveFcmToken(uid, token) {
   }
 }
 
-// Schedule a local notification at a specific time today (or tomorrow if past)
+// ── Fallback: setTimeout-based local notifications ───────────
+// Used when Service Worker is unavailable (e.g., dev/HTTP)
 function scheduleLocalNotification({ id, hour, minute, title, body }) {
   const now = new Date();
   const target = new Date();
   target.setHours(hour, minute, 0, 0);
 
-  // If time already passed today, schedule for tomorrow
-  if (target <= now) {
-    target.setDate(target.getDate() + 1);
-  }
+  if (target <= now) target.setDate(target.getDate() + 1);
 
   const msUntil = target.getTime() - now.getTime();
 
@@ -62,18 +76,13 @@ function scheduleLocalNotification({ id, hour, minute, title, body }) {
     if (Notification.permission === 'granted') {
       const notification = new Notification(title, {
         body,
-        icon: '/roomi-prototype/roomi-favicon.svg',
-        badge: '/roomi-prototype/roomi-favicon.svg',
-        tag: `roomi-${id}`, // replaces previous notification of same type
+        icon: `${import.meta.env.BASE_URL}roomi-favicon.svg`,
+        badge: `${import.meta.env.BASE_URL}roomi-favicon.svg`,
+        tag: `roomi-${id}`,
         renotify: true,
       });
-
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
+      notification.onclick = () => { window.focus(); notification.close(); };
     }
-
     // Re-schedule for next day
     scheduleLocalNotification({ id, hour, minute, title, body });
   }, msUntil);
@@ -81,13 +90,42 @@ function scheduleLocalNotification({ id, hour, minute, title, body }) {
   return timeoutId;
 }
 
+// ── Schedule via Service Worker using showNotification ───────
+async function scheduleViaServiceWorker(swReg) {
+  // Register periodic sync if browser supports it (Chrome + HTTPS only)
+  if ('periodicSync' in swReg) {
+    try {
+      const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+      if (status.state === 'granted') {
+        await swReg.periodicSync.register('roomi-daily-checkin', {
+          minInterval: 8 * 60 * 60 * 1000, // 8 hours
+        });
+        console.log('[SW] Periodic sync registered');
+        return true;
+      }
+    } catch (err) {
+      console.warn('[SW] Periodic sync not available:', err);
+    }
+  }
+  return false;
+}
+
+// ── Main hook ────────────────────────────────────────────────
 export function usePushNotifications(userId) {
   const [permission, setPermission] = useState(
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
   );
   const [isScheduled, setIsScheduled] = useState(false);
+  const [swReg, setSwReg] = useState(null);
 
-  // Request permission and schedule notifications
+  // Register SW on mount
+  useEffect(() => {
+    registerServiceWorker().then(reg => {
+      if (reg) setSwReg(reg);
+    });
+  }, []);
+
+  // Request permission + schedule
   const requestPermission = useCallback(async () => {
     if (typeof Notification === 'undefined') return 'unsupported';
 
@@ -96,11 +134,17 @@ export function usePushNotifications(userId) {
       setPermission(result);
 
       if (result === 'granted') {
-        // Schedule all daily reminders
-        ROOMI_SCHEDULE.forEach(scheduleLocalNotification);
+        // Try SW periodic sync first, fall back to setTimeout
+        let usedSW = false;
+        if (swReg) {
+          usedSW = await scheduleViaServiceWorker(swReg);
+        }
+        if (!usedSW) {
+          ROOMI_SCHEDULE.forEach(scheduleLocalNotification);
+        }
         setIsScheduled(true);
 
-        // Store token for future server-side push (stub — real FCM setup needed for SW)
+        // Save token for future server-side FCM
         if (userId) {
           await saveFcmToken(userId, `web-local-${userId}-${Date.now()}`);
         }
@@ -111,36 +155,58 @@ export function usePushNotifications(userId) {
       console.error('Push notification error:', err);
       return 'denied';
     }
-  }, [userId]);
+  }, [userId, swReg]);
 
-  // Send an immediate test notification
-  const sendTestNotification = useCallback(() => {
+  // Send immediate test notification
+  const sendTestNotification = useCallback(async () => {
     if (Notification.permission !== 'granted') return;
-    new Notification('🦊 ROOMI is watching out for you!', {
-      body: 'Daily check-ins are now active. You\'ll hear from me soon! ✨',
-      icon: '/roomi-prototype/roomi-favicon.svg',
+
+    const options = {
+      body: "Daily check-ins are now active. You'll hear from me soon! ✨",
+      icon: `${import.meta.env.BASE_URL}roomi-favicon.svg`,
       tag: 'roomi-test',
-    });
-  }, []);
+    };
 
-  // Send a safety alert to caregiver (shown immediately)
-  const sendCrisisAlert = useCallback((residentName) => {
+    // Use SW if available (more reliable)
+    if (swReg) {
+      await swReg.showNotification('🦊 ROOMI is watching out for you!', options);
+    } else {
+      new Notification('🦊 ROOMI is watching out for you!', options);
+    }
+  }, [swReg]);
+
+  // Crisis alert (shown immediately, requires interaction)
+  const sendCrisisAlert = useCallback(async (residentName) => {
     if (Notification.permission !== 'granted') return;
-    new Notification('🚨 ROOMI Safety Alert', {
-      body: `${residentName || 'Your resident'} may need support. Check in now.`,
-      icon: '/roomi-prototype/roomi-favicon.svg',
-      tag: 'roomi-crisis',
-      requireInteraction: true, // stays until user interacts
-    });
-  }, []);
 
-  // Auto-schedule when permission is already granted (page reload)
+    const options = {
+      body: `${residentName || 'Your resident'} may need support. Check in now.`,
+      icon: `${import.meta.env.BASE_URL}roomi-favicon.svg`,
+      tag: 'roomi-crisis',
+      requireInteraction: true,
+    };
+
+    if (swReg) {
+      await swReg.showNotification('🚨 ROOMI Safety Alert', options);
+    } else {
+      new Notification('🚨 ROOMI Safety Alert', options);
+    }
+  }, [swReg]);
+
+  // Auto-schedule when already granted (page reload)
   useEffect(() => {
     if (permission === 'granted' && !isScheduled) {
-      ROOMI_SCHEDULE.forEach(scheduleLocalNotification);
-      setIsScheduled(true);
+      if (swReg) {
+        scheduleViaServiceWorker(swReg).then(usedSW => {
+          if (!usedSW) ROOMI_SCHEDULE.forEach(scheduleLocalNotification);
+          setIsScheduled(true);
+        });
+      } else {
+        ROOMI_SCHEDULE.forEach(scheduleLocalNotification);
+        setIsScheduled(true);
+      }
     }
-  }, [permission, isScheduled]);
+  }, [permission, isScheduled, swReg]);
 
   return {
     permission,
