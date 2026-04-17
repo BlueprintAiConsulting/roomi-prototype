@@ -183,6 +183,44 @@ export async function getAnchorSummary(uid, date) {
   }
 }
 
+// ─── Daily Summaries (Cross-Session Memory) ─────────────────
+
+export async function saveDailySummary(uid, summaryText) {
+  if (!db || !uid || !summaryText) return;
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    const docId = `${uid}_${today}`;
+    await setDoc(doc(db, 'dailySummaries', docId), {
+      userId: uid,
+      date: today,
+      summary: summaryText,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.error('Error saving daily summary:', err);
+  }
+}
+
+export async function getRecentSummaries(uid, days = 3) {
+  if (!db || !uid) return [];
+
+  try {
+    // Query last N days of summaries
+    const q = query(
+      collection(db, 'dailySummaries'),
+      where('userId', '==', uid),
+      orderBy('date', 'desc'),
+      limit(days)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error('Error loading recent summaries:', err);
+    return [];
+  }
+}
+
 // ─── Custom hook wrapper ────────────────────────────────────
 
 export function useFirestore() {
@@ -193,6 +231,8 @@ export function useFirestore() {
     getConversations: useCallback(getConversations, []),
     saveAnchorSummary: useCallback(saveAnchorSummary, []),
     getAnchorSummary: useCallback(getAnchorSummary, []),
+    saveDailySummary: useCallback(saveDailySummary, []),
+    getRecentSummaries: useCallback(getRecentSummaries, []),
   };
 }
 

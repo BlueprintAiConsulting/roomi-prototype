@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { onboardingSteps } from '../data/sampleData.js';
 import './Onboarding.css';
 
@@ -14,6 +14,47 @@ export default function Onboarding({ onClose, onComplete }) {
   });
   const [direction, setDirection] = useState('forward');
   const [medInput, setMedInput] = useState({ name: '', time: '8:00 AM' });
+  const modalRef = useRef(null);
+
+  // Escape key to close
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // Focus trap inside modal
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return;
+
+    const handleTrapFocus = (e) => {
+      if (e.key !== 'Tab') return;
+      const focusable = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    modal.addEventListener('keydown', handleTrapFocus);
+    // Auto-focus first focusable element
+    const firstFocusable = modal.querySelector('input, button, select');
+    if (firstFocusable) setTimeout(() => firstFocusable.focus(), 100);
+
+    return () => modal.removeEventListener('keydown', handleTrapFocus);
+  }, [currentStep]);
 
   // Filter steps based on conditional showIf logic
   const activeSteps = useMemo(() => {
@@ -194,7 +235,7 @@ export default function Onboarding({ onClose, onComplete }) {
 
   return (
     <div className="onboard-overlay" onClick={onClose} role="presentation">
-      <div className="onboard-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Onboarding step ${currentStep + 1} of ${activeSteps.length}: ${step.title}`}>
+      <div className="onboard-modal" ref={modalRef} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Onboarding step ${currentStep + 1} of ${activeSteps.length}: ${step.title}`}>
         {/* Progress bar */}
         <div className="onboard-progress" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin="0" aria-valuemax="100" aria-label={`Onboarding progress: ${Math.round(progress)}%`}>
           <div className="onboard-progress-bar" style={{ width: `${progress}%` }} />

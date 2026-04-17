@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { demoConversations, dailySchedule, userProfile } from '../data/sampleData.js';
-import { saveConversation, getConversations } from '../hooks/useFirestore.js';
+import { saveConversation, getConversations, saveDailySummary, getRecentSummaries } from '../hooks/useFirestore.js';
 import VoiceMode from './VoiceMode.jsx';
 import NotificationPrompt from './NotificationPrompt.jsx';
 import './ChatInterface.css';
@@ -72,14 +72,17 @@ export default function ChatInterface({ userData, userId }) {
   const messagesEndRef = useRef(null);
   const chatBodyRef = useRef(null);
   const conversationHistoryRef = useRef([]); // keeps context across messages
+  const lastMessageRef = useRef(null); // focus target for new messages (a11y)
 
   // ─── NEW STATE: Resilience & UX ────────────────────────────
   const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
   const [rateLimited, setRateLimited] = useState(false);
   const [firestoreLoaded, setFirestoreLoaded] = useState(false);
+  const [recentMemory, setRecentMemory] = useState([]); // cross-session summaries
   const messageTsRef = useRef([]); // timestamps for rate limiting
   const typingTimeoutRef = useRef(null);
   const retryCountRef = useRef(0);
+  const sessionMsgCountRef = useRef(0); // track messages for summary trigger
 
   // ─── Dynamic user context ─────────────────────────────────
   // Use onboarded/Firestore data when available, fall back to sampleData for demo
@@ -115,6 +118,56 @@ export default function ChatInterface({ userData, userId }) {
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
+
+  // ─── Load cross-session memory on mount ─────────────────────
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        const summaries = await getRecentSummaries(userId, 3);
+        setRecentMemory(summaries);
+      } catch (err) {
+        console.warn('Could not load memory:', err);
+      }
+    })();
+  }, [userId]);
+
+  // ─── Save daily summary on unmount (if enough messages) ────
+  useEffect(() => {
+    return () => {
+      if (!userId || sessionMsgCountRef.current < 4) return;
+      // Fire-and-forget summary generation
+      const msgs = conversationHistoryRef.current
+        .filter(m => m.parts?.[0]?.text)
+        .map(m => ({ sender: m.role === 'model' ? 'roomi' : 'user', text: m.parts[0].text }));
+      if (msgs.length < 4) return;
+
+      const chatApiUrl = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:3001';
+      fetch(`${chatApiUrl}/api/summarize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: msgs, userName }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.summary) saveDailySummary(userId, data.summary);
+        })
+        .catch(() => {}); // best-effort
+    };
+  }, [userId, userName]);
+
+  // ─── Global keyboard shortcuts ─────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (showSchedule) setShowSchedule(false);
+        else if (sidebarOpen) setSidebarOpen(false);
+        else if (showNotifPrompt) setShowNotifPrompt(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showSchedule, sidebarOpen, showNotifPrompt]);
 
   // ─── Typing timeout safety net ─────────────────────────────
   // If isTyping gets stuck (crash, network hang), auto-clear after 12s
@@ -440,7 +493,17 @@ export default function ChatInterface({ userData, userId }) {
     ? `- Takes ${userMeds.map(m => `${m.name} ${m.dosage}`).join(' and ')} each morning`
     : '- No medications tracked currently';
 
+  // Build memory section from recent daily summaries
+  const memorySection = recentMemory.length > 0
+    ? recentMemory.map(s => `- ${s.date}: ${s.summary}`).join('\n')
+    : '';
+
   const ROOMI_SYSTEM_PROMPT = `You are ROOMI — a daily companion for ${fullName} (they go by "${userName}"). ${fullName} is a person with intellectual and developmental differences (IDD). You are their warm, familiar companion who knows them personally. You are NOT a therapist, NOT a medical professional, NOT an assistant.
+${memorySection ? `
+## RECENT MEMORY (things you know from past conversations)
+Use these naturally — don't list them, just reference them when relevant. If they mention something from a past day, connect to it.
+${memorySection}
+` : ''}
 
 ## YOUR VOICE
 - Warm, patient, gently playful, specific. Like a trusted friend who's known them for years.
@@ -674,6 +737,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
 
     // Add user message to UI
     setMessages(prev => [...prev, { sender: 'user', text: userText, id: Date.now() }]);
+    sessionMsgCountRef.current++;
 
     // LAYER 1: Check safety filters before sending to Gemini
     const safetyCheck = checkSafetyFilters(userText);
@@ -1009,11 +1073,15 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
               </div>
             )}
 
-            {messages.map((msg) => (
+            {messages.map((msg, idx) => (
               <div
                 key={msg.id}
                 className={`chat-msg chat-msg--${msg.sender}`}
                 style={{ animation: 'fadeInUp 0.3s ease-out' }}
+                ref={idx === messages.length - 1 && msg.sender === 'roomi' ? lastMessageRef : null}
+                tabIndex={msg.sender === 'roomi' ? -1 : undefined}
+                role={msg.sender === 'roomi' ? 'article' : undefined}
+                aria-label={msg.sender === 'roomi' ? `ROOMI said: ${msg.text.substring(0, 80)}` : undefined}
               >
                 {msg.sender === 'roomi' && (
                   <div className="chat-msg-avatar">
@@ -1036,7 +1104,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
                 </div>
                 <div className="chat-msg-content">
                   <div className="chat-msg-bubble typing-bubble">
-                    <div className="typing-dots" role="status" aria-label="ROOMI is thinking">
+                    <div className="typing-dots" role="status" aria-live="assertive" aria-label="ROOMI is thinking">
                       <span />
                       <span />
                       <span />
@@ -1045,6 +1113,11 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
                 </div>
               </div>
             )}
+
+            {/* Screen reader announcement for typing state */}
+            <div className="sr-only" aria-live="assertive" aria-atomic="true">
+              {isTyping ? 'ROOMI is thinking...' : ''}
+            </div>
 
             <div ref={messagesEndRef} />
           </div>

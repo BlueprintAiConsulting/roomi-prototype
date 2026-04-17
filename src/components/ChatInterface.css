@@ -940,3 +940,71 @@
   }
 }
 
+/* ═══════════════════════════════════════════════
+   ACCESSIBILITY
+   ═══════════════════════════════════════════════ */
+
+/* Focus-visible rings — clear, high-contrast */
+.chat-send-btn:focus-visible,
+.chat-quick-reply:focus-visible,
+.chat-scenario-tab:focus-visible,
+.chat-sidebar-item:focus-visible,
+.chat-welcome-topic:focus-visible,
+.chat-scroll-fab:focus-visible,
+.chat-schedule-toggle:focus-visible {
+  outline: 2px solid var(--amber-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255, 179, 0, 0.2);
+}
+
+.chat-input:focus-visible {
+  outline: 2px solid var(--amber-primary);
+  outline-offset: -2px;
+}
+
+.chat-msg--roomi:focus-visible {
+  outline: 2px solid rgba(255, 179, 0, 0.3);
+  outline-offset: 4px;
+  border-radius: var(--radius-lg);
+}
+
+/* Minimum touch targets (44×44px) */
+.chat-send-btn,
+.chat-quick-reply,
+.chat-scenario-tab,
+.chat-sidebar-item,
+.chat-scroll-fab {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .chat-welcome-fox,
+  .typing-dots span,
+  .chat-status-dot--thinking {
+    animation: none !important;
+  }
+}

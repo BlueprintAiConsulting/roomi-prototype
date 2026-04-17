@@ -485,3 +485,53 @@
   opacity: 0.95;
 }
 
+/* ═══════════════════════════════════════════════
+   ACCESSIBILITY
+   ═══════════════════════════════════════════════ */
+
+/* Focus-visible rings */
+.onboard-input:focus-visible,
+.onboard-time-btn:focus-visible,
+.onboard-toggle:focus-visible,
+.onboard-med-time-select:focus-visible,
+.onboard-med-add-btn:focus-visible,
+.onboard-close:focus-visible,
+.onboard-skip:focus-visible,
+.onboard-next:focus-visible,
+.onboard-med-chip-remove:focus-visible {
+  outline: 2px solid var(--amber-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255, 179, 0, 0.2);
+}
+
+/* Touch targets */
+.onboard-time-btn,
+.onboard-toggle,
+.onboard-close,
+.onboard-next,
+.onboard-skip {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .onboard-modal,
+  .onboard-content,
+  .onboard-content--forward,
+  .onboard-content--back {
+    animation: none !important;
+  }
+
+  .onboard-fox {
+    animation: none !important;
+  }
+
+  .onboard-fox-glow {
+    animation: none !important;
+  }
+
+  .onboard-progress-bar {
+    transition: none !important;
+  }
+}

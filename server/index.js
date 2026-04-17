@@ -125,6 +125,51 @@ setInterval(() => {
   }
 }, 300000);
 
+// ─── Summarize API ──────────────────────────────────────────
+// Generates a 1-2 sentence daily summary from conversation messages
+app.post('/api/summarize', async (req, res) => {
+  try {
+    const { messages, userName } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length < 2) {
+      return res.status(400).json({ error: 'Need at least 2 messages to summarize.' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Server configuration error.' });
+    }
+
+    const transcript = messages
+      .map(m => `${m.sender === 'roomi' ? 'ROOMI' : (userName || 'User')}: ${m.text}`)
+      .join('\n');
+
+    const summaryPrompt = `Summarize this conversation between ROOMI (a companion) and ${userName || 'the user'} in 1-2 short sentences. Write it as a note about the person's day — what happened, how they felt, anything notable. Be warm and specific. Do NOT use clinical language. Example: "${userName || 'User'} had a good morning. Took meds on time, enjoyed drawing, and mentioned Biscuit knocked cereal off the table."
+
+Conversation:
+${transcript}`;
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+    const geminiRes = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: summaryPrompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 100 },
+      }),
+    });
+
+    const data = await geminiRes.json();
+    const summary = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+
+    return res.json({ summary });
+  } catch (err) {
+    console.error('[summarize] Error:', err.message);
+    return res.status(500).json({ error: 'Failed to generate summary.' });
+  }
+});
+
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer });
 
