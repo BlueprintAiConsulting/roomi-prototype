@@ -8,6 +8,7 @@ import Onboarding from './components/Onboarding.jsx';
 import AnchorView from './components/AnchorView.jsx';
 import Universe from './components/Universe.jsx';
 import Login from './components/Login.jsx';
+import LoginGate from './components/LoginGate.jsx';
 import './App.css';
 
 function AppContent() {
@@ -176,8 +177,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <LoginGate>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </LoginGate>
   );
 }
