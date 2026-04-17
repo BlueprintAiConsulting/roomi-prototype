@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import './Landing.css';
 
-export default function Landing({ onNavigate, onOpenOnboarding }) {
+export default function Landing({ onNavigate, onOpenOnboarding, onTesterChat }) {
   const heroRef = useRef(null);
 
   useEffect(() => {
@@ -287,6 +287,28 @@ export default function Landing({ onNavigate, onOpenOnboarding }) {
           <div className="footer-copy">
             © 2026 ROOMI · Built with dignity and care.
           </div>
+          {onTesterChat && (
+            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+              <button
+                onClick={onTesterChat}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.4rem',
+                  cursor: 'pointer',
+                  opacity: 0.35,
+                  transition: 'opacity 0.2s',
+                  padding: '0.5rem',
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '0.35'}
+                aria-label="Tester chat"
+                title="Live chat test"
+              >
+                🦊
+              </button>
+            </div>
+          )}
         </div>
       </footer>
     </div>
