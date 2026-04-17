@@ -8,7 +8,6 @@ import Onboarding from './components/Onboarding.jsx';
 import AnchorView from './components/AnchorView.jsx';
 import Universe from './components/Universe.jsx';
 import Login from './components/Login.jsx';
-import LoginGate, { isTestAuthed } from './components/LoginGate.jsx';
 import './App.css';
 
 function AppContent() {
@@ -20,7 +19,6 @@ function AppContent() {
   const [userData, setUserData] = useState(null);
   const [resetKey, setResetKey] = useState(0);
   const [profileLoaded, setProfileLoaded] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
   const mainRef = useRef(null);
 
   // Load user profile from Firestore on auth
@@ -65,20 +63,6 @@ function AppContent() {
   }, [currentView]);
 
   const handleOpenOnboarding = useCallback(() => {
-    setShowOnboarding(true);
-  }, []);
-
-  // Tester login flow: show login → on success → open onboarding
-  const handleTesterAccess = useCallback(() => {
-    if (isTestAuthed()) {
-      setShowOnboarding(true);
-    } else {
-      setShowLogin(true);
-    }
-  }, []);
-
-  const handleLoginSuccess = useCallback(() => {
-    setShowLogin(false);
     setShowOnboarding(true);
   }, []);
 
@@ -185,24 +169,6 @@ function AppContent() {
           onClose={handleCloseOnboarding}
           onComplete={handleOnboardingComplete}
         />
-      )}
-
-      <LoginGate
-        show={showLogin}
-        onSuccess={handleLoginSuccess}
-        onClose={() => setShowLogin(false)}
-      />
-
-      {/* Hidden tester login — small floating button, bottom-right */}
-      {displayedView === 'landing' && (
-        <button
-          className="tester-fab"
-          onClick={handleTesterAccess}
-          aria-label="Tester login"
-          title="Tester login"
-        >
-          🔒
-        </button>
       )}
     </div>
   );
