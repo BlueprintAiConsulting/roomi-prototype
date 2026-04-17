@@ -5,24 +5,37 @@ const VALID_USER = 'roomi';
 const VALID_PASS = 'forcass2030';
 const AUTH_KEY = 'roomi_test_auth';
 
-export default function LoginGate({ children }) {
-  const [isAuthed, setIsAuthed] = useState(false);
+// Check if already authenticated
+export function isTestAuthed() {
+  return localStorage.getItem(AUTH_KEY) === 'true';
+}
+
+// Clear test auth
+export function clearTestAuth() {
+  localStorage.removeItem(AUTH_KEY);
+}
+
+export default function LoginGate({ show, onSuccess, onClose }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
 
+  // Already authed — just proceed
   useEffect(() => {
-    const stored = localStorage.getItem(AUTH_KEY);
-    if (stored === 'true') setIsAuthed(true);
-  }, []);
+    if (show && isTestAuthed()) {
+      onSuccess();
+    }
+  }, [show, onSuccess]);
+
+  if (!show || isTestAuthed()) return null;
 
   const handleLogin = (e) => {
     e.preventDefault();
     if (username.toLowerCase().trim() === VALID_USER && password === VALID_PASS) {
       localStorage.setItem(AUTH_KEY, 'true');
-      setIsAuthed(true);
       setError('');
+      onSuccess();
     } else {
       setError('Invalid credentials');
       setShake(true);
@@ -30,12 +43,15 @@ export default function LoginGate({ children }) {
     }
   };
 
-  if (isAuthed) return children;
-
   return (
-    <div className="login-gate">
+    <div className="login-gate" onClick={onClose}>
       <div className="login-gate-bg" />
-      <form className={`login-card ${shake ? 'login-shake' : ''}`} onSubmit={handleLogin}>
+      <form
+        className={`login-card ${shake ? 'login-shake' : ''}`}
+        onSubmit={handleLogin}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button type="button" className="login-close" onClick={onClose} aria-label="Close">✕</button>
         <div className="login-fox">🦊</div>
         <h1 className="login-title">ROOMI</h1>
         <p className="login-subtitle">Live User Test Mode</p>
@@ -71,7 +87,7 @@ export default function LoginGate({ children }) {
           Sign In →
         </button>
 
-        <p className="login-footer">Authorized testers only</p>
+        <p className="login-footer">Founding council & authorized testers only</p>
       </form>
     </div>
   );
