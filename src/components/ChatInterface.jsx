@@ -685,10 +685,10 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
     }
 
     // Ensure response isn't too long (sign of Gemini going off-script)
-    if (text.length > 500) {
-      // Trim to first 2 complete sentences with graceful ending
+    if (text.length > 800) {
+      // Trim to first 3 complete sentences with graceful ending
       const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-      text = sentences.slice(0, 2).join(' ').trim();
+      text = sentences.slice(0, 3).join(' ').trim();
       if (!text.match(/[.!?🦊💙💛✨]$/)) {
         text += ' 🦊';
       }
