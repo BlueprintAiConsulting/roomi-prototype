@@ -66,6 +66,18 @@ function AppContent() {
     setShowOnboarding(true);
   }, []);
 
+  // Tester shortcut: skip onboarding, jump straight to raw chat
+  const handleTesterChat = useCallback(() => {
+    setUserData({
+      preferredName: 'Tester',
+      meds: [],
+      anchorFirstName: '',
+      petName: '',
+      isTesterMode: true,
+    });
+    handleNavigate('chat');
+  }, [handleNavigate]);
+
   const handleCloseOnboarding = useCallback(() => {
     setShowOnboarding(false);
   }, []);
@@ -169,6 +181,44 @@ function AppContent() {
           onClose={handleCloseOnboarding}
           onComplete={handleOnboardingComplete}
         />
+      )}
+
+      {/* Hidden tester shortcut — only visible on landing */}
+      {displayedView === 'landing' && (
+        <button
+          onClick={handleTesterChat}
+          aria-label="Tester mode"
+          style={{
+            position: 'fixed',
+            bottom: '12px',
+            right: '12px',
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.08)',
+            color: 'rgba(255,255,255,0.12)',
+            fontSize: '11px',
+            cursor: 'pointer',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.3s',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.borderColor = 'rgba(255,179,0,0.4)';
+            e.currentTarget.style.color = 'rgba(255,179,0,0.7)';
+            e.currentTarget.style.background = 'rgba(255,179,0,0.08)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+            e.currentTarget.style.color = 'rgba(255,255,255,0.12)';
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          🦊
+        </button>
       )}
     </div>
   );
