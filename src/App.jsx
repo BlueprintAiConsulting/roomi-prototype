@@ -8,6 +8,7 @@ import Onboarding from './components/Onboarding.jsx';
 import AnchorView from './components/AnchorView.jsx';
 import Universe from './components/Universe.jsx';
 import Login from './components/Login.jsx';
+import RawChatTest from './components/RawChatTest.jsx';
 import './App.css';
 
 function AppContent() {
@@ -19,6 +20,7 @@ function AppContent() {
   const [userData, setUserData] = useState(null);
   const [resetKey, setResetKey] = useState(0);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [showRawChat, setShowRawChat] = useState(false);
   const mainRef = useRef(null);
 
   // Load user profile from Firestore on auth
@@ -68,15 +70,8 @@ function AppContent() {
 
   // Tester shortcut: skip onboarding, jump straight to raw chat
   const handleTesterChat = useCallback(() => {
-    setUserData({
-      preferredName: 'Tester',
-      meds: [],
-      anchorFirstName: '',
-      petName: '',
-      isTesterMode: true,
-    });
-    handleNavigate('chat');
-  }, [handleNavigate]);
+    setShowRawChat(true);
+  }, []);
 
   const handleCloseOnboarding = useCallback(() => {
     setShowOnboarding(false);
@@ -184,6 +179,9 @@ function AppContent() {
         />
       )}
 
+      {showRawChat && (
+        <RawChatTest onExit={() => setShowRawChat(false)} />
+      )}
     </div>
   );
 }
