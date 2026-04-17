@@ -17,13 +17,16 @@ const ALLOWED_ORIGINS = [
 let activeConnections = 0;
 const serverStartTime = Date.now();
 
+app.use(express.json({ limit: '50kb' }));
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (!origin || ALLOWED_ORIGINS.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin || '*');
   }
-  res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
@@ -35,6 +38,92 @@ app.get('/health', (_, res) => res.json({
   memory: process.memoryUsage().heapUsed,
   model: 'gemini-2.5-flash-native-audio-latest',
 }));
+
+// ─── Chat API Proxy ──────────────────────────────────────
+// Secure proxy for Gemini text chat — API key stays server-side
+const chatRateLimit = new Map(); // IP -> { count, resetTime }
+
+app.post('/api/chat', async (req, res) => {
+  try {
+    // Rate limit: 30 requests per minute per IP
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    const now = Date.now();
+    const rateEntry = chatRateLimit.get(ip) || { count: 0, resetTime: now + 60000 };
+    if (now > rateEntry.resetTime) {
+      rateEntry.count = 0;
+      rateEntry.resetTime = now + 60000;
+    }
+    rateEntry.count++;
+    chatRateLimit.set(ip, rateEntry);
+    if (rateEntry.count > 30) {
+      return res.status(429).json({ error: 'Rate limited. Try again in a minute.' });
+    }
+
+    const { systemPrompt, contents, safetySettings, generationConfig } = req.body;
+
+    // Validate required fields
+    if (!contents || !Array.isArray(contents)) {
+      return res.status(400).json({ error: 'Missing or invalid contents array.' });
+    }
+    if (!systemPrompt || typeof systemPrompt !== 'string') {
+      return res.status(400).json({ error: 'Missing systemPrompt.' });
+    }
+
+    // Forward to Gemini API
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error('[chat] GEMINI_API_KEY not set');
+      return res.status(500).json({ error: 'Server configuration error.' });
+    }
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+    const geminiBody = {
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents,
+      safetySettings: safetySettings || [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+      ],
+      generationConfig: generationConfig || {
+        temperature: 0.5,
+        maxOutputTokens: 200,
+        topP: 0.85,
+      },
+    };
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+
+    const geminiRes = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(geminiBody),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+    const data = await geminiRes.json();
+    return res.json(data);
+
+  } catch (err) {
+    console.error('[chat] Proxy error:', err.message);
+    if (err.name === 'AbortError') {
+      return res.status(504).json({ error: 'Gemini API timed out.' });
+    }
+    return res.status(500).json({ error: 'Internal server error.' });
+  }
+});
+
+// Clean up rate limit map every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of chatRateLimit) {
+    if (now > entry.resetTime + 60000) chatRateLimit.delete(ip);
+  }
+}, 300000);
 
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer });

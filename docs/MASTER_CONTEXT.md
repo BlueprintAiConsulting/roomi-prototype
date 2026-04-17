@@ -109,7 +109,7 @@ ROOMI — "Responsive Online Observation & Mentoring Interface." A conversationa
 ## GitHub Actions (`deploy.yml`)
 - Triggers: push to `main` + manual `workflow_dispatch`
 - Node 20, `npm ci`, `npm run build`
-- Injects 8 secrets: `VITE_GEMINI_API_KEY`, `VITE_VOICE_WS_URL`, + 6 Firebase config vars
+- Injects 8 secrets: `VITE_CHAT_API_URL`, `VITE_VOICE_WS_URL`, + 6 Firebase config vars (Gemini API key stays server-side only)
 - Deploys `dist/` to GitHub Pages via `actions/deploy-pages@v4`
 
 ## Key Design Decisions

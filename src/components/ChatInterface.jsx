@@ -710,20 +710,19 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
 
     while (attempt <= maxRetries) {
       try {
-        const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-        const safetySettings = [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-        ];
+        // Route through server proxy — API key stays server-side
+        const chatApiUrl = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:3001';
+        const endpoint = `${chatApiUrl}/api/chat`;
 
         const body = {
-          system_instruction: { parts: [{ text: ROOMI_SYSTEM_PROMPT }] },
+          systemPrompt: ROOMI_SYSTEM_PROMPT,
           contents: conversationHistoryRef.current,
-          safetySettings,
+          safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+          ],
           generationConfig: {
             temperature: 0.5,
             maxOutputTokens: 200,
@@ -732,7 +731,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
         };
 
         const controller = new AbortController();
-        const fetchTimeout = setTimeout(() => controller.abort(), 10000); // 10s timeout
+        const fetchTimeout = setTimeout(() => controller.abort(), 12000); // 12s timeout (server has 12s too)
 
         const res = await fetch(endpoint, {
           method: 'POST',
@@ -742,6 +741,12 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
         });
 
         clearTimeout(fetchTimeout);
+
+        if (res.status === 429) {
+          // Server-side rate limit
+          throw new Error('Rate limited by server');
+        }
+
         const data = await res.json();
 
         // Check if response was blocked by safety filters
