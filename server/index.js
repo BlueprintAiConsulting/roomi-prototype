@@ -97,7 +97,7 @@ app.post('/api/chat', async (req, res) => {
       ],
       generationConfig: generationConfig || {
         temperature: 0.5,
-        maxOutputTokens: 200,
+        maxOutputTokens: 350,
         topP: 0.85,
       },
     };
