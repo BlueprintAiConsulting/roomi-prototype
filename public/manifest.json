@@ -1,0 +1,58 @@
+{
+  "name": "ROOMI — Your Co-Pilot for Everyday Independence",
+  "short_name": "ROOMI",
+  "description": "ROOMI is your daily companion — helping you stay on track, feel supported, and live more independently.",
+  "start_url": "/roomi-prototype/",
+  "scope": "/roomi-prototype/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d0d1a",
+  "theme_color": "#ffb300",
+  "categories": ["health", "lifestyle", "productivity"],
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/roomi-prototype/roomi-favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/roomi-prototype/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/roomi-prototype/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Morning Check-In",
+      "short_name": "Morning",
+      "description": "Start your morning with ROOMI",
+      "url": "/roomi-prototype/?scenario=morning",
+      "icons": [{ "src": "/roomi-prototype/roomi-favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Meds Reminder",
+      "short_name": "Meds",
+      "description": "Check your medication schedule",
+      "url": "/roomi-prototype/?scenario=meds",
+      "icons": [{ "src": "/roomi-prototype/roomi-favicon.svg", "sizes": "any" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/roomi-prototype/roomi-favicon.svg",
+      "sizes": "500x691",
+      "type": "image/svg+xml",
+      "label": "ROOMI Chat Interface"
+    }
+  ],
+  "prefer_related_applications": false
+}
