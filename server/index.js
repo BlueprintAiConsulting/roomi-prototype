@@ -76,7 +76,7 @@ app.post('/api/chat', async (req, res) => {
       return res.status(500).json({ error: 'Server configuration error.' });
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
 
     const geminiBody = {
       system_instruction: { parts: [{ text: systemPrompt }] },
@@ -149,7 +149,7 @@ app.post('/api/summarize', async (req, res) => {
 Conversation:
 ${transcript}`;
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
 
     const geminiRes = await fetch(endpoint, {
       method: 'POST',
