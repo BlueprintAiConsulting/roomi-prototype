@@ -144,7 +144,7 @@ function AppContent() {
         return (
           <Landing
             onNavigate={handleNavigate}
-            onOpenOnboarding={handleTesterAccess}
+            onOpenOnboarding={handleOpenOnboarding}
           />
         );
     }
@@ -192,6 +192,18 @@ function AppContent() {
         onSuccess={handleLoginSuccess}
         onClose={() => setShowLogin(false)}
       />
+
+      {/* Hidden tester login — small floating button, bottom-right */}
+      {displayedView === 'landing' && (
+        <button
+          className="tester-fab"
+          onClick={handleTesterAccess}
+          aria-label="Tester login"
+          title="Tester login"
+        >
+          🔒
+        </button>
+      )}
     </div>
   );
 }
