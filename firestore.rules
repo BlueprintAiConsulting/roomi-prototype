@@ -76,6 +76,20 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── dailySummaries (cross-session memory) ────────────────
+    // Residents can read/write their own daily summaries.
+    // Caregivers can read their residents' summaries.
+    match /dailySummaries/{docId} {
+      allow read: if request.auth != null &&
+        (resource.data.userId == request.auth.uid ||
+         isCaregiverFor(resource.data.userId));
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+      allow delete: if false;
+    }
+
     // ─── fcmTokens ──────────────────────────────────────────────
     // Users manage their own push tokens only.
     match /fcmTokens/{uid} {
