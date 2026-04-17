@@ -43,9 +43,10 @@ service cloud.firestore {
     // ─── users (profiles) ───────────────────────────────────────
     // Residents can only read/write their own profile.
     // Caregivers can read profiles of their residents.
+    // Allow any auth (incl. anonymous) to write own profile — full auth required for sensitive ops
     match /users/{uid} {
       allow read: if isOwner(uid) || isCaregiverFor(uid);
-      allow write: if isOwner(uid) && isAuthenticated();
+      allow write: if isOwner(uid) && request.auth != null;
     }
 
     // ─── conversations ──────────────────────────────────────────
