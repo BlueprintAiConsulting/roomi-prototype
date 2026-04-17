@@ -6,7 +6,7 @@ import { createRoomiSession } from './roomiSession.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-1.5-flash';
+const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-2.0-flash-001';
 const ALLOWED_ORIGINS = [
   'https://blueprintaiconsulting.github.io',
   'http://localhost:5173',
