@@ -6,7 +6,7 @@ import { createRoomiSession } from './roomiSession.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-1.5-flash-latest';
+const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash';
 const ALLOWED_ORIGINS = [
   'https://blueprintaiconsulting.github.io',
   'http://localhost:5173',
@@ -78,11 +78,17 @@ app.post('/api/chat', async (req, res) => {
       return res.status(500).json({ error: 'Server configuration error.' });
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
+
+    // v1 API doesn't support system_instruction — inject as a preamble
+    const preambleContents = [
+      { role: 'user', parts: [{ text: `[System Instructions — follow these at all times]\n${systemPrompt}\n[End System Instructions]\n\nPlease acknowledge and follow these instructions.` }] },
+      { role: 'model', parts: [{ text: 'Understood! I\'ll follow those instructions for our entire conversation. 🦊' }] },
+      ...contents,
+    ];
 
     const geminiBody = {
-      system_instruction: { parts: [{ text: systemPrompt }] },
-      contents,
+      contents: preambleContents,
       safetySettings: safetySettings || [
         { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
         { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE' },
@@ -151,7 +157,7 @@ app.post('/api/summarize', async (req, res) => {
 Conversation:
 ${transcript}`;
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
 
     const geminiRes = await fetch(endpoint, {
       method: 'POST',
