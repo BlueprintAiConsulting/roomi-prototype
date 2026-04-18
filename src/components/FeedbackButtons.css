@@ -1,0 +1,90 @@
+/* FeedbackButtons.css — Rating widget for ROOMI responses */
+
+.feedback-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  margin-left: 4px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  pointer-events: none;
+}
+
+.feedback-buttons--visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.feedback-buttons--rated {
+  /* keep visible after rating */
+  opacity: 0.85;
+}
+
+/* ── Buttons ── */
+.feedback-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.feedback-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.75);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.1);
+}
+
+.feedback-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.feedback-btn:disabled {
+  cursor: default;
+}
+
+/* ── Selected state ── */
+.feedback-btn--up.feedback-btn--selected {
+  background: rgba(5, 150, 105, 0.25);
+  border-color: #059669;
+  color: #34d399;
+  transform: scale(1.05);
+}
+
+.feedback-btn--down.feedback-btn--selected {
+  background: rgba(229, 161, 0, 0.2);
+  border-color: #E5A100;
+  color: #fbbf24;
+  transform: scale(1.05);
+}
+
+/* ── Dimmed (other button after rating) ── */
+.feedback-btn--dimmed {
+  opacity: 0.2;
+}
+
+/* ── Thanks text ── */
+.feedback-thanks {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 4px;
+  font-style: italic;
+  animation: fadeInUp 0.25s ease forwards;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

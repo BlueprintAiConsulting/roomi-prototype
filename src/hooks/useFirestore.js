@@ -1,4 +1,5 @@
 // useFirestore.js — Firestore data access layer for ROOMI
+// Phase 1: analytics, feedback, and safety event logging added
 import { useCallback } from 'react';
 import {
   db,
@@ -221,18 +222,102 @@ export async function getRecentSummaries(uid, days = 3) {
   }
 }
 
+// ─── Privacy Helper ─────────────────────────────────────────
+// One-way hash of userId so analytics data is pseudonymous
+export async function hashUserId(uid) {
+  if (!uid) return 'anonymous';
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(uid + 'roomi-salt-v1');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  } catch {
+    return 'hash-unavailable';
+  }
+}
+
+// ─── Analytics Logging ──────────────────────────────────────
+// Logs every conversation turn for behavior analysis (no PII)
+
+export async function logAnalyticsTurn(uid, data) {
+  if (!db) return;
+  try {
+    const hashedId = await hashUserId(uid);
+    await addDoc(collection(db, 'analytics'), {
+      userId:          hashedId,
+      scenario:        data.scenario        || 'unknown',
+      date:            new Date().toISOString().split('T')[0],
+      turn:            data.turn            ?? 0,
+      userMsgLen:      data.userMsgLen      ?? 0,
+      roomiMsgLen:     data.roomiMsgLen     ?? 0,
+      responseTimeMs:  data.responseTimeMs  ?? 0,
+      safetyFired:     data.safetyFired     ?? false,
+      finishReason:    data.finishReason    || 'STOP',
+      timestamp:       serverTimestamp(),
+    });
+  } catch (err) {
+    // Analytics are non-critical — fail silently
+    console.warn('[analytics] Failed to log turn:', err.message);
+  }
+}
+
+// ─── Feedback Logging ───────────────────────────────────────
+// Records thumbs up/down ratings on individual ROOMI responses
+
+export async function logFeedback(uid, data) {
+  if (!db) return;
+  try {
+    const hashedId = await hashUserId(uid);
+    await addDoc(collection(db, 'feedback'), {
+      userId:      hashedId,
+      scenario:    data.scenario    || 'unknown',
+      date:        new Date().toISOString().split('T')[0],
+      turn:        data.turn        ?? 0,
+      rating:      data.rating,     // 'up' | 'down'
+      msgSnippet:  (data.msgSnippet || '').slice(0, 80),
+      timestamp:   serverTimestamp(),
+    });
+  } catch (err) {
+    console.warn('[feedback] Failed to log:', err.message);
+  }
+}
+
+// ─── Safety Event Logging ───────────────────────────────────
+// Records when any safety layer fires — category + layer only, no message text
+
+export async function logSafetyEvent(uid, data) {
+  if (!db) return;
+  try {
+    const hashedId = await hashUserId(uid);
+    await addDoc(collection(db, 'safetyEvents'), {
+      userId:    hashedId,
+      scenario:  data.scenario  || 'unknown',
+      layer:     data.layer     ?? 1,       // 1 | 2 | 3
+      category:  data.category  || 'unknown',
+      inputLen:  data.inputLen  ?? 0,
+      timestamp: serverTimestamp(),
+    });
+  } catch (err) {
+    console.warn('[safety] Failed to log event:', err.message);
+  }
+}
+
 // ─── Custom hook wrapper ────────────────────────────────────
 
 export function useFirestore() {
   return {
-    saveUserProfile: useCallback(saveUserProfile, []),
-    getUserProfile: useCallback(getUserProfile, []),
-    saveConversation: useCallback(saveConversation, []),
-    getConversations: useCallback(getConversations, []),
-    saveAnchorSummary: useCallback(saveAnchorSummary, []),
-    getAnchorSummary: useCallback(getAnchorSummary, []),
-    saveDailySummary: useCallback(saveDailySummary, []),
+    saveUserProfile:    useCallback(saveUserProfile, []),
+    getUserProfile:     useCallback(getUserProfile, []),
+    saveConversation:   useCallback(saveConversation, []),
+    getConversations:   useCallback(getConversations, []),
+    saveAnchorSummary:  useCallback(saveAnchorSummary, []),
+    getAnchorSummary:   useCallback(getAnchorSummary, []),
+    saveDailySummary:   useCallback(saveDailySummary, []),
     getRecentSummaries: useCallback(getRecentSummaries, []),
+    logAnalyticsTurn:   useCallback(logAnalyticsTurn, []),
+    logFeedback:        useCallback(logFeedback, []),
+    logSafetyEvent:     useCallback(logSafetyEvent, []),
   };
 }
 

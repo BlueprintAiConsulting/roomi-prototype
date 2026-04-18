@@ -97,6 +97,29 @@ service cloud.firestore {
       allow read, write: if isOwner(uid) && isAuthenticated();
     }
 
+    // ─── analytics (Phase 1) ────────────────────────────────────
+    // Write-only from client — no userId field (hashed), so no owner check possible.
+    // Read only via Firebase Admin SDK (console / backend). Never expose to client.
+    match /analytics/{docId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
+
+    // ─── feedback (Phase 1) ─────────────────────────────────────
+    // Write-only from client. Reads reserved for admin review.
+    match /feedback/{docId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
+
+    // ─── safetyEvents (Phase 1) ─────────────────────────────────
+    // Write-only from client. Critical for safety monitoring.
+    // Read only via admin. No client read ever.
+    match /safetyEvents/{docId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
+
     // ─── Catch-all: deny everything else ────────────────────────
     match /{document=**} {
       allow read, write: if false;

@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { demoConversations, dailySchedule, userProfile } from '../data/sampleData.js';
-import { saveConversation, getConversations, saveDailySummary, getRecentSummaries } from '../hooks/useFirestore.js';
+import { saveConversation, getConversations, saveDailySummary, getRecentSummaries, logAnalyticsTurn, logFeedback, logSafetyEvent } from '../hooks/useFirestore.js';
 import VoiceMode from './VoiceMode.jsx';
 import NotificationPrompt from './NotificationPrompt.jsx';
+import FeedbackButtons from './FeedbackButtons.jsx';
 import './ChatInterface.css';
 
 const SCENARIOS = [
@@ -83,6 +84,8 @@ export default function ChatInterface({ userData, userId }) {
   const typingTimeoutRef = useRef(null);
   const retryCountRef = useRef(0);
   const sessionMsgCountRef = useRef(0); // track messages for summary trigger
+  const turnCountRef = useRef(0);        // Phase 1: turn index for analytics
+  const sendStartTimeRef = useRef(0);    // Phase 1: response time measurement
 
   // ─── Dynamic user context ─────────────────────────────────
   // Use onboarded/Firestore data when available, fall back to sampleData for demo
@@ -745,6 +748,14 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
       conversationHistoryRef.current.push({ role: 'user', parts: [{ text: userText }] });
       conversationHistoryRef.current.push({ role: 'model', parts: [{ text: safetyCheck.response }] });
 
+      // Phase 1: Log safety event (Layer 1)
+      logSafetyEvent(userId, {
+        scenario: activeScenario,
+        layer: 1,
+        category: safetyCheck.type || 'unknown',
+        inputLen: userText.length,
+      });
+
       setIsTyping(true);
       setTimeout(() => {
         setIsTyping(false);
@@ -767,6 +778,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
     // Normal flow — send to Gemini with retry
     conversationHistoryRef.current.push({ role: 'user', parts: [{ text: userText }] });
     setIsTyping(true);
+    sendStartTimeRef.current = Date.now(); // Phase 1: start response timer
 
     const maxRetries = 1;
     let attempt = 0;
@@ -825,12 +837,36 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
         }
 
         // LAYER 3: Validate Gemini's response
+        const preValidateText = roomiText;
         roomiText = validateResponse(roomiText);
+
+        // Phase 1: Log safety event if Layer 3 transformed the response
+        if (roomiText !== preValidateText) {
+          logSafetyEvent(userId, {
+            scenario: activeScenario,
+            layer: 3,
+            category: 'response-validation',
+            inputLen: preValidateText.length,
+          });
+        }
 
         conversationHistoryRef.current.push({ role: 'model', parts: [{ text: roomiText }] });
 
+        // Phase 1: Log analytics turn
+        const responseTimeMs = Date.now() - sendStartTimeRef.current;
+        const currentTurn = turnCountRef.current++;
+        logAnalyticsTurn(userId, {
+          scenario:       activeScenario,
+          turn:           currentTurn,
+          userMsgLen:     userText.length,
+          roomiMsgLen:    roomiText.length,
+          responseTimeMs,
+          safetyFired:    false,
+          finishReason:   data?.candidates?.[0]?.finishReason || 'STOP',
+        });
+
         setIsTyping(false);
-        const newRoomiMsg = { sender: 'roomi', text: roomiText, id: Date.now() + 1 };
+        const newRoomiMsg = { sender: 'roomi', text: roomiText, id: Date.now() + 1, turn: currentTurn };
         setMessages(prev => {
           const updated = [...prev, newRoomiMsg];
           // Persist to Firestore
@@ -1093,6 +1129,16 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
                   <div className="chat-msg-time">
                     {msg.sender === 'roomi' ? 'ROOMI' : fullName} · {formatTime(msg.id)}
                   </div>
+                  {/* Phase 1: Feedback buttons on ROOMI messages only */}
+                  {msg.sender === 'roomi' && userId && (
+                    <FeedbackButtons
+                      userId={userId}
+                      scenario={activeScenario}
+                      turn={msg.turn ?? idx}
+                      msgText={msg.text}
+                      msgId={msg.id}
+                    />
+                  )}
                 </div>
               </div>
             ))}
