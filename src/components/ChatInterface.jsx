@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { demoConversations, dailySchedule, userProfile } from '../data/sampleData.js';
 import { saveConversation, getConversations, saveDailySummary, getRecentSummaries, logAnalyticsTurn, logFeedback, logSafetyEvent } from '../hooks/useFirestore.js';
+import { buildKnowledgePrompt } from '../data/roomiKnowledge.js';
 import VoiceMode from './VoiceMode.jsx';
 import NotificationPrompt from './NotificationPrompt.jsx';
 import FeedbackButtons from './FeedbackButtons.jsx';
@@ -502,6 +503,8 @@ export default function ChatInterface({ userData, userId }) {
     : '';
 
   const ROOMI_SYSTEM_PROMPT = `You are ROOMI — a daily companion for ${fullName} (they go by "${userName}"). ${fullName} is a person with intellectual and developmental differences (IDD). You are their warm, familiar companion who knows them personally. You are NOT a therapist, NOT a medical professional, NOT an assistant.
+
+${buildKnowledgePrompt()}
 ${memorySection ? `
 ## RECENT MEMORY (things you know from past conversations)
 Use these naturally — don't list them, just reference them when relevant. If they mention something from a past day, connect to it.
