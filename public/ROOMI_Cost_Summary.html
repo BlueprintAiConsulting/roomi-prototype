@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ROOMI — Cost Summary</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; color: #374151; font-size: 11px; line-height: 1.45; background: #fff; }
+  .page { width: 8.5in; min-height: 10.6in; padding: 0.55in 0.6in; page-break-after: always; position: relative; }
+  .page:last-child { page-break-after: avoid; }
+  .brand-bar { height: 4px; background: #E5A100; border-radius: 2px; margin-bottom: 20px; }
+  .title { font-size: 28px; font-weight: 800; color: #111827; letter-spacing: -0.5px; }
+  .title span { font-weight: 400; color: #9CA3AF; }
+  .subtitle { font-size: 10px; color: #9CA3AF; margin-top: 6px; letter-spacing: 0.3px; }
+  .meta-row { display: flex; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; padding: 8px 0; margin: 12px 0 18px; }
+  .meta-item { flex: 1; }
+  .meta-label { font-size: 7px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.8px; }
+  .meta-value { font-size: 10px; color: #374151; margin-top: 2px; }
+  .hero { background: #111827; border-radius: 10px; padding: 14px 20px; display: flex; justify-content: space-around; margin-bottom: 22px; }
+  .hero-stat { text-align: center; }
+  .hero-num { font-size: 22px; font-weight: 800; color: #E5A100; }
+  .hero-label { font-size: 8.5px; color: #9CA3AF; margin-top: 1px; }
+  .hero-sub { font-size: 7.5px; color: #6B7280; }
+  h2 { font-size: 12px; font-weight: 700; color: #111827; margin-bottom: 4px; padding-bottom: 5px; border-bottom: 2px solid #E5A100; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 16px; font-size: 9.5px; }
+  thead th { background: #1F2937; color: #fff; font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 8px; text-align: left; }
+  thead th:first-child { border-radius: 4px 0 0 0; }
+  thead th:last-child { border-radius: 0 4px 0 0; }
+  tbody tr:nth-child(even) { background: #F9FAFB; }
+  tbody td { padding: 5px 8px; vertical-align: top; }
+  .cost { font-weight: 700; color: #E5A100; }
+  .green { font-weight: 700; color: #059669; }
+  .note { font-size: 8px; color: #9CA3AF; }
+  .total-row { background: #FFF8E1 !important; }
+  .total-row td { font-weight: 700; font-size: 10px; }
+  .callout { border-radius: 8px; padding: 12px 16px; margin: 10px 0 16px; }
+  .callout-dark { background: #111827; color: #D1D5DB; }
+  .callout-dark .ct { color: #E5A100; font-weight: 700; font-size: 9px; margin-bottom: 5px; }
+  .callout-dark p { font-size: 9.5px; line-height: 1.55; }
+  .stage-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid #F3F4F6; font-size: 9.5px; }
+  .pill { font-size: 7px; font-weight: 700; padding: 3px 10px; border-radius: 4px; min-width: 50px; text-align: center; }
+  .pill-green { background: #ECFDF5; color: #059669; }
+  .pill-orange { background: #FFF8E1; color: #D97706; }
+  .pill-gray { background: #F3F4F6; color: #9CA3AF; }
+  .stage-name { font-weight: 600; color: #111827; min-width: 120px; }
+  .stage-cost { font-weight: 700; color: #E5A100; min-width: 80px; }
+  .stage-desc { color: #6B7280; font-size: 8.5px; }
+  .econ-wrap { display: flex; gap: 14px; margin: 8px 0 16px; }
+  .econ-box { flex: 1; border-radius: 8px; padding: 12px 14px; }
+  .econ-green { background: #ECFDF5; border: 1px solid #A7F3D0; border-left: 4px solid #059669; }
+  .econ-amber { background: #FFF8E1; border: 1px solid #FFE082; border-left: 4px solid #E5A100; }
+  .econ-title { font-size: 9px; font-weight: 700; margin-bottom: 5px; }
+  .econ-line { font-size: 9.5px; color: #374151; margin: 2px 0; }
+  .econ-margin { font-size: 14px; font-weight: 800; margin-top: 5px; }
+  .footer { font-size: 7px; color: #9CA3AF; display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid #E5E7EB; position: absolute; bottom: 0.45in; left: 0.6in; right: 0.6in; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="brand-bar"></div>
+  <div class="title">ROOMI <span>Cost Summary</span></div>
+  <div class="subtitle">Infrastructure  •  Storage  •  Memory  •  AI Inference  •  Model Improvement</div>
+  <div class="meta-row">
+    <div class="meta-item"><div class="meta-label">Date</div><div class="meta-value">April 18, 2026</div></div>
+    <div class="meta-item"><div class="meta-label">Scope</div><div class="meta-value">IDD Companion — Full Stack</div></div>
+    <div class="meta-item"><div class="meta-label">Pricing</div><div class="meta-value">Verified Gemini / Firebase / Render</div></div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-stat"><div class="hero-num">$0.72</div><div class="hero-label">per user / month</div><div class="hero-sub">all-in at 100 users</div></div>
+    <div class="hero-stat"><div class="hero-num">~$72</div><div class="hero-label">total / month</div><div class="hero-sub">100 users, full memory</div></div>
+    <div class="hero-stat"><div class="hero-num">88–94%</div><div class="hero-label">gross margin</div><div class="hero-sub">at $5–10 / user pricing</div></div>
+  </div>
+
+  <h2>Detailed Breakdown — 100 Users</h2>
+  <table>
+    <thead><tr><th style="width:195px">Line Item</th><th style="width:65px">Cost / Mo</th><th>Calculation</th></tr></thead>
+    <tbody>
+      <tr><td>AI Chat — Base Inference</td><td class="cost">$49</td><td class="note">36K msgs/mo × 3,500 input + 60 output tokens @ $0.30 / $2.50 per 1M</td></tr>
+      <tr><td>AI Chat — Memory Injection</td><td class="cost">$9</td><td class="note">850 extra tokens/turn for 1yr compressed memory (7-day + weekly + monthly + facts)</td></tr>
+      <tr><td>AI Voice Pipeline</td><td class="cost">$11</td><td class="note">9 voice users × 30 days × 5 min sessions, 4x audio token multiplier</td></tr>
+      <tr><td>AI Daily Summaries</td><td class="cost">$1</td><td class="note">60 summaries/day via Flash Lite — compresses each day to 1 sentence</td></tr>
+      <tr><td>AI Fact Extraction</td><td class="cost">$1</td><td class="note">60 calls/day via Flash Lite — pulls long-term facts from conversations</td></tr>
+      <tr><td>Firestore Storage (1yr history)</td><td class="cost">$0</td><td class="note">120 MB/yr for 100 users. Chat + summaries + facts + analytics. Free tier: 1 GB</td></tr>
+      <tr><td>Firestore Reads / Writes</td><td class="cost">$0</td><td class="note">3K reads / 1.5K writes per day — within free tier (50K / 20K daily)</td></tr>
+      <tr><td>Render Voice Server</td><td class="cost">$7</td><td class="note">Starter plan (512 MB), always-on Node.js + WebSocket</td></tr>
+      <tr><td>Domain + Monitoring</td><td class="cost">$1</td><td class="note">UptimeRobot (free) + custom domain</td></tr>
+      <tr class="total-row"><td>TOTAL</td><td class="cost" style="font-size:12px">$72</td><td>per month for 100 users  |  <span class="cost">$0.72</span> per user</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Cost at Scale</h2>
+  <table>
+    <thead><tr><th>Users</th><th>AI Total</th><th>Memory</th><th>Storage</th><th>Infra</th><th>Total / Mo</th><th>Per User</th><th>Margin @$10</th></tr></thead>
+    <tbody>
+      <tr><td><b>100</b></td><td>$63</td><td>$9</td><td>$0</td><td>$8</td><td><b>$72</b></td><td class="cost">$0.72</td><td class="green">93%</td></tr>
+      <tr><td><b>500</b></td><td>$317</td><td>$46</td><td>$0</td><td>$26</td><td><b>$343</b></td><td class="cost">$0.69</td><td class="green">93%</td></tr>
+      <tr><td><b>1,000</b></td><td>$634</td><td>$92</td><td>$0</td><td>$28</td><td><b>$662</b></td><td class="cost">$0.66</td><td class="green">93%</td></tr>
+      <tr><td><b>5,000</b></td><td>$3,172</td><td>$459</td><td>$1</td><td>$59</td><td><b>$3,231</b></td><td class="cost">$0.65</td><td class="green">94%</td></tr>
+      <tr><td><b>10,000</b></td><td>$6,344</td><td>$918</td><td>$2</td><td>$109</td><td><b>$6,453</b></td><td class="cost">$0.65</td><td class="green">94%</td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer"><span>ROOMI  |  Blueprint AI Consulting  |  Confidential</span><span>Page 1 of 2</span></div>
+</div>
+
+<div class="page">
+  <div class="brand-bar"></div>
+
+  <h2>Memory Architecture — Storage & Token Costs</h2>
+  <table>
+    <thead><tr><th style="width:150px">Data Type</th><th style="width:105px">Size / User / Year</th><th style="width:45px">Cost</th><th>How It Works</th></tr></thead>
+    <tbody>
+      <tr><td>Raw Chat History</td><td>365 KB</td><td class="green">$0</td><td class="note">All messages archived for caregiver review + future fine-tuning</td></tr>
+      <tr><td>Daily Summaries</td><td>55 KB</td><td class="green">$0</td><td class="note">1-2 sentence per day. Last 7 days injected fully into prompt.</td></tr>
+      <tr><td>Weekly Summaries</td><td>4 KB</td><td class="green">$0</td><td class="note">Weeks 2-4 compressed. 7x fewer tokens than daily.</td></tr>
+      <tr><td>Monthly Summaries</td><td>3 KB</td><td class="green">$0</td><td class="note">Months 2-12 compressed. 30x fewer tokens than daily.</td></tr>
+      <tr><td>Learned Facts</td><td>8 KB</td><td class="green">$0</td><td class="note">"Has a dog named Rex", "Afraid of thunderstorms" — deduplicated</td></tr>
+      <tr><td>Analytics + Feedback</td><td>730 KB</td><td class="green">$0</td><td class="note">Turn analytics, thumbs up/down, safety events</td></tr>
+      <tr class="total-row"><td>TOTAL</td><td>~1.2 MB / user / yr</td><td class="green">$0</td><td>100 users = 120 MB. 1,000 users = 1.2 GB ($0.04/mo)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout callout-dark">
+    <div class="ct">WHY MEMORY IS CHEAP</div>
+    <p>Storage is free. The real memory cost is <strong style="color:#E5A100">token injection</strong>: each turn sends memory context to Gemini as input tokens. Our compression strategy (7-day full + weekly + monthly + facts) keeps this to ~850 extra tokens/turn, adding ~$9/month at 100 users — instead of ~$45/month for naive full-year injection.</p>
+  </div>
+
+  <h2>Model Improvement Roadmap</h2>
+  <div style="margin: 6px 0 14px">
+    <div class="stage-row"><span class="pill pill-green">NOW</span><span class="stage-name">Prompt Tuning</span><span class="stage-cost">$0 / mo</span><span class="stage-desc">Update system prompt based on feedback. Redeploy. No API cost.</span></div>
+    <div class="stage-row"><span class="pill pill-green">LIVE</span><span class="stage-name">Feedback Collection</span><span class="stage-cost">$0–3 / mo</span><span class="stage-desc">Thumbs up/down + analytics in Firestore. Phase 1 already shipping.</span></div>
+    <div class="stage-row"><span class="pill pill-orange">STAGE 2</span><span class="stage-name">A/B Prompt Testing</span><span class="stage-cost">$0 / mo</span><span class="stage-desc">Different prompt versions per cohort. Compare ratings. Zero extra API cost.</span></div>
+    <div class="stage-row"><span class="pill pill-gray">STAGE 3</span><span class="stage-name">Fine-Tuning</span><span class="stage-cost">$200–500 / run</span><span class="stage-desc">Custom Gemini model. Needs 5,000+ users and curated training data.</span></div>
+  </div>
+
+  <h2>Unit Economics</h2>
+  <div class="econ-wrap">
+    <div class="econ-box econ-green">
+      <div class="econ-title" style="color:#059669">AT $10 / USER / MONTH</div>
+      <div class="econ-line">1,000 users = $10,000 revenue</div>
+      <div class="econ-line">Infrastructure = $662</div>
+      <div class="econ-margin" style="color:#059669">93% gross margin</div>
+    </div>
+    <div class="econ-box econ-amber">
+      <div class="econ-title" style="color:#D97706">AT $5 / USER / MONTH</div>
+      <div class="econ-line">1,000 users = $5,000 revenue</div>
+      <div class="econ-line">Infrastructure = $662</div>
+      <div class="econ-margin" style="color:#D97706">87% gross margin</div>
+    </div>
+  </div>
+
+  <div class="callout callout-dark">
+    <div class="ct">KEY TAKEAWAY</div>
+    <p>ROOMI costs <strong style="color:#E5A100">~$72/month</strong> for 100 users with full-year memory, voice, chat, feedback, and model improvement. Per-user cost drops from $0.72 at 100 users to $0.65 at 10,000. Storage is free. Primary cost driver is AI tokens. No fine-tuning until 5,000+ users. At any price above $3/user, the business is profitable on infra alone.</p>
+  </div>
+
+  <div class="footer"><span>ROOMI  |  Blueprint AI Consulting  |  Confidential</span><span>Page 2 of 2</span></div>
+</div>
+
+</body></html>
