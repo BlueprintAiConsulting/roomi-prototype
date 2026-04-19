@@ -691,12 +691,39 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
     }
 
     // Ensure response isn't too long (sign of Gemini going off-script)
-    if (text.length > 800) {
-      // Trim to first 3 complete sentences with graceful ending
-      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-      text = sentences.slice(0, 3).join(' ').trim();
+    if (text.length > 1200) {
+      // Find a clean sentence break within the first ~1000 chars
+      const cutoff = text.slice(0, 1000);
+      const lastSentenceEnd = Math.max(
+        cutoff.lastIndexOf('. '),
+        cutoff.lastIndexOf('! '),
+        cutoff.lastIndexOf('? '),
+        cutoff.lastIndexOf('.\n'),
+        cutoff.lastIndexOf('!\n'),
+        cutoff.lastIndexOf('?\n'),
+      );
+      if (lastSentenceEnd > 100) {
+        text = text.slice(0, lastSentenceEnd + 1).trim();
+      } else {
+        // No clean break — take first 3 sentences
+        const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+        text = sentences.slice(0, 3).join(' ').trim();
+      }
       if (!text.match(/[.!?🦊💙💛✨]$/)) {
         text += ' 🦊';
+      }
+    }
+
+    // Catch mid-sentence cutoffs from token limits
+    // If the response doesn't end with punctuation or emoji, it was cut off
+    if (text.length > 10 && !/[.!?🦊💙💛✨😊🌅💊📋🌙"')]\s*$/.test(text)) {
+      // Try to find the last complete sentence
+      const lastEnd = Math.max(text.lastIndexOf('. '), text.lastIndexOf('! '), text.lastIndexOf('? '), text.lastIndexOf('.'), text.lastIndexOf('!'), text.lastIndexOf('?'));
+      if (lastEnd > text.length * 0.4) {
+        text = text.slice(0, lastEnd + 1).trim();
+      } else {
+        // Can't find a sentence end — add a graceful closer
+        text = text.trim() + '... 🦊';
       }
     }
 
@@ -797,15 +824,16 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
           systemPrompt: ROOMI_SYSTEM_PROMPT,
           contents: conversationHistoryRef.current,
           safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_LOW_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
           ],
           generationConfig: {
-            temperature: 0.5,
-            maxOutputTokens: 200,
+            temperature: 0.45,
+            maxOutputTokens: 512,
             topP: 0.85,
+            stopSequences: ['\n\n\n'],
           },
         };
 
