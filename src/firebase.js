@@ -2,7 +2,7 @@
 // Environment variables are injected via .env (local) or GitHub Secrets (production)
 
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, getDocs, limit } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -34,6 +34,8 @@ export {
   // Auth methods
   signInWithPopup,
   signInAnonymously,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   onAuthStateChanged,
   signOut,
   // Firestore methods

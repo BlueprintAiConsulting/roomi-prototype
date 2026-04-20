@@ -5,8 +5,19 @@ import {
   googleProvider,
   signInWithPopup,
   signInAnonymously as firebaseSignInAnon,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   onAuthStateChanged,
   signOut as firebaseSignOut,
+  db,
+  doc,
+  getDoc,
+  setDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  serverTimestamp,
 } from '../firebase.js';
 import { getUserRole, setUserRole } from './useFirestore.js';
 
@@ -72,6 +83,99 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // ─── Email/Password Auth (Phase 2D) ────────────────────────
+
+  // Validate an invite code before signup
+  const validateInviteCode = useCallback(async (code) => {
+    if (!db || !code) return { valid: false, error: 'Invalid code' };
+    try {
+      const q = query(
+        collection(db, 'inviteCodes'),
+        where('code', '==', code.trim().toUpperCase()),
+        where('used', '==', false)
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) return { valid: false, error: 'Invalid or used invite code' };
+
+      const invite = { id: snap.docs[0].id, ...snap.docs[0].data() };
+      return { valid: true, invite };
+    } catch (err) {
+      console.error('Invite code validation error:', err);
+      return { valid: false, error: 'Could not validate code' };
+    }
+  }, []);
+
+  // Sign up with email + invite code
+  const signUpWithEmail = useCallback(async (email, password, inviteCode) => {
+    if (!auth || !db) return null;
+    try {
+      setError(null);
+
+      // Validate invite code first
+      const { valid, invite, error: codeError } = await validateInviteCode(inviteCode);
+      if (!valid) {
+        setError(codeError);
+        return null;
+      }
+
+      // Create Firebase auth user
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = result.user.uid;
+
+      // Set role from invite code
+      const assignedRole = invite.role || 'resident';
+      await setUserRole(uid, assignedRole);
+      setRole(assignedRole);
+
+      // Mark invite code as used
+      await setDoc(doc(db, 'inviteCodes', invite.id), {
+        used: true,
+        usedBy: uid,
+        usedAt: serverTimestamp(),
+      }, { merge: true });
+
+      // If invite has a facility, link user to it
+      if (invite.facilityId) {
+        await setDoc(doc(db, 'users', uid), {
+          facilityId: invite.facilityId,
+          facilityName: invite.facilityName || '',
+        }, { merge: true });
+      }
+
+      console.log(`[auth] Signed up user ${uid} as ${assignedRole} via invite ${invite.code}`);
+      return result.user;
+    } catch (err) {
+      const friendlyErrors = {
+        'auth/email-already-in-use': 'This email is already registered. Try signing in instead.',
+        'auth/weak-password': 'Password must be at least 6 characters.',
+        'auth/invalid-email': 'Please enter a valid email address.',
+      };
+      setError(friendlyErrors[err.code] || err.message);
+      console.error('Email signup error:', err);
+      return null;
+    }
+  }, [validateInviteCode]);
+
+  // Sign in with email/password (no invite code needed)
+  const signInWithEmail = useCallback(async (email, password) => {
+    if (!auth) return null;
+    try {
+      setError(null);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      return result.user;
+    } catch (err) {
+      const friendlyErrors = {
+        'auth/user-not-found': 'No account found with this email.',
+        'auth/wrong-password': 'Incorrect password. Try again.',
+        'auth/invalid-credential': 'Email or password is incorrect.',
+        'auth/too-many-requests': 'Too many attempts. Please wait a moment.',
+      };
+      setError(friendlyErrors[err.code] || err.message);
+      console.error('Email sign-in error:', err);
+      return null;
+    }
+  }, []);
+
   // Claim caregiver role after Google sign-in
   const claimCaregiverRole = useCallback(async (uid) => {
     await setUserRole(uid, 'caregiver');
@@ -107,6 +211,9 @@ export function AuthProvider({ children }) {
     isDemoMode: !auth,
     signInWithGoogle,
     signInAnonymously,
+    signUpWithEmail,
+    signInWithEmail,
+    validateInviteCode,
     claimCaregiverRole,
     claimResidentRole,
     logout,
@@ -128,3 +235,4 @@ export function useAuth() {
 }
 
 export default useAuth;
+

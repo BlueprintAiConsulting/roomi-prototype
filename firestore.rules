@@ -141,6 +141,18 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // ─── inviteCodes (Phase 2D) ─────────────────────────────────
+    // Read: any authenticated user (needed during signup to validate code)
+    // Update: authenticated user can mark a code as used during signup
+    // Create/Delete: admin SDK only (for generating codes)
+    match /inviteCodes/{docId} {
+      allow read: if request.auth != null;
+      allow update: if request.auth != null &&
+        request.resource.data.used == true &&
+        request.resource.data.usedBy == request.auth.uid;
+      allow create, delete: if false;
+    }
+
     // ─── Catch-all: deny everything else ────────────────────────
     match /{document=**} {
       allow read, write: if false;
