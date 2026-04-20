@@ -4,6 +4,32 @@ import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { createRoomiSession } from './roomiSession.js';
 
+// ─── Firebase Admin SDK (lazy init for admin endpoints) ─────
+let adminDb = null;
+async function getAdminDb() {
+  if (adminDb) return adminDb;
+  try {
+    const admin = await import('firebase-admin');
+    const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!serviceAccount) {
+      console.warn('[admin] FIREBASE_SERVICE_ACCOUNT not set — admin endpoints disabled');
+      return null;
+    }
+    const cred = JSON.parse(serviceAccount);
+    if (!admin.default.apps.length) {
+      admin.default.initializeApp({
+        credential: admin.default.credential.cert(cred),
+      });
+    }
+    adminDb = admin.default.firestore();
+    console.log('[admin] Firebase Admin SDK initialized');
+    return adminDb;
+  } catch (err) {
+    console.error('[admin] Failed to init Firebase Admin:', err.message);
+    return null;
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash';
@@ -306,6 +332,154 @@ Return ONLY the summary paragraph, no labels or formatting.`;
   } catch (err) {
     console.error('[compress-memory] Error:', err.message);
     return res.status(500).json({ error: 'Failed to compress memory.', weekly: '' });
+  }
+});
+
+// ─── Admin Analytics APIs (Phase 2C) ────────────────────────
+// Read from write-only collections using Firebase Admin SDK
+// Protected by ADMIN_API_KEY env var
+
+function verifyAdminKey(req) {
+  const key = req.headers['x-admin-key'] || req.query.adminKey;
+  const expected = process.env.ADMIN_API_KEY;
+  if (!expected) return true; // No key set = development mode, allow all
+  return key === expected;
+}
+
+// GET /api/admin/analytics — 7-day engagement data
+app.get('/api/admin/analytics', async (req, res) => {
+  if (!verifyAdminKey(req)) return res.status(403).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getAdminDb();
+    if (!db) return res.status(503).json({ error: 'Admin SDK not configured' });
+
+    const { userId, days = 7 } = req.query;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+
+    // Get date range
+    const dates = [];
+    for (let i = 0; i < parseInt(days); i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+
+    const snap = await db.collection('analytics')
+      .where('userId', '==', userId)
+      .where('date', 'in', dates.slice(0, 10)) // Firestore 'in' supports max 10
+      .get();
+
+    // Aggregate by date
+    const byDate = {};
+    dates.forEach(d => { byDate[d] = { date: d, turns: 0, userMsgs: 0, roomiMsgs: 0, avgResponseMs: 0, safetyFired: 0 }; });
+
+    snap.docs.forEach(doc => {
+      const data = doc.data();
+      const entry = byDate[data.date];
+      if (entry) {
+        entry.turns++;
+        entry.userMsgs += data.userMsgLen || 0;
+        entry.roomiMsgs += data.roomiMsgLen || 0;
+        entry.avgResponseMs += data.responseTimeMs || 0;
+        if (data.safetyFired) entry.safetyFired++;
+      }
+    });
+
+    // Finalize averages
+    Object.values(byDate).forEach(e => {
+      if (e.turns > 0) e.avgResponseMs = Math.round(e.avgResponseMs / e.turns);
+    });
+
+    return res.json({ analytics: Object.values(byDate).reverse() });
+  } catch (err) {
+    console.error('[admin/analytics] Error:', err.message);
+    return res.status(500).json({ error: 'Failed to load analytics' });
+  }
+});
+
+// GET /api/admin/safety-events — recent safety interceptions
+app.get('/api/admin/safety-events', async (req, res) => {
+  if (!verifyAdminKey(req)) return res.status(403).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getAdminDb();
+    if (!db) return res.status(503).json({ error: 'Admin SDK not configured' });
+
+    const { userId, days = 7 } = req.query;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+
+    const since = new Date();
+    since.setDate(since.getDate() - parseInt(days));
+
+    const snap = await db.collection('safetyEvents')
+      .where('userId', '==', userId)
+      .where('timestamp', '>=', since)
+      .orderBy('timestamp', 'desc')
+      .limit(50)
+      .get();
+
+    const events = snap.docs.map(doc => {
+      const data = doc.data();
+      return {
+        layer: data.layer,
+        category: data.category,
+        scenario: data.scenario,
+        timestamp: data.timestamp?.toDate?.()?.toISOString() || null,
+      };
+    });
+
+    return res.json({ events });
+  } catch (err) {
+    console.error('[admin/safety-events] Error:', err.message);
+    return res.status(500).json({ error: 'Failed to load safety events' });
+  }
+});
+
+// GET /api/admin/feedback — thumbs up/down aggregation
+app.get('/api/admin/feedback', async (req, res) => {
+  if (!verifyAdminKey(req)) return res.status(403).json({ error: 'Unauthorized' });
+
+  try {
+    const db = await getAdminDb();
+    if (!db) return res.status(503).json({ error: 'Admin SDK not configured' });
+
+    const { userId, days = 7 } = req.query;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+
+    const dates = [];
+    for (let i = 0; i < parseInt(days); i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+
+    const snap = await db.collection('feedback')
+      .where('userId', '==', userId)
+      .where('date', 'in', dates.slice(0, 10))
+      .get();
+
+    let thumbsUp = 0;
+    let thumbsDown = 0;
+    const byDate = {};
+
+    snap.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.rating === 'up') thumbsUp++;
+      else if (data.rating === 'down') thumbsDown++;
+
+      if (!byDate[data.date]) byDate[data.date] = { up: 0, down: 0 };
+      if (data.rating === 'up') byDate[data.date].up++;
+      else byDate[data.date].down++;
+    });
+
+    const total = thumbsUp + thumbsDown;
+    const satisfactionRate = total > 0 ? Math.round((thumbsUp / total) * 100) : null;
+
+    return res.json({ thumbsUp, thumbsDown, total, satisfactionRate, byDate });
+  } catch (err) {
+    console.error('[admin/feedback] Error:', err.message);
+    return res.status(500).json({ error: 'Failed to load feedback' });
   }
 });
 

@@ -714,3 +714,161 @@
   font-weight: 600;
   color: var(--text-muted);
 }
+
+/* ============================================
+   Phase 2C: Analytics Dashboard
+   ============================================ */
+
+/* Section divider */
+.anchor-analytics-divider {
+  text-align: center;
+  margin: var(--space-2xl) 0 var(--space-xl);
+  position: relative;
+}
+.anchor-analytics-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 179, 0, 0.3), transparent);
+}
+.anchor-analytics-divider-text {
+  position: relative;
+  background: var(--bg-primary, #0a0f1c);
+  padding: 0 var(--space-xl);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--amber-primary);
+  letter-spacing: 0.02em;
+}
+
+/* Engagement Chart */
+.anchor-card--engagement {
+  grid-column: 1 / -1; /* Full width */
+}
+.anchor-engagement-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 160px;
+  padding-top: var(--space-md);
+}
+.anchor-engagement-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+}
+.anchor-engagement-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.anchor-engagement-bar-wrapper {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.anchor-engagement-bar {
+  width: 100%;
+  max-width: 48px;
+  margin: 0 auto;
+  background: linear-gradient(180deg, var(--teal-accent), rgba(0, 155, 176, 0.3));
+  border-radius: 4px 4px 0 0;
+  transition: height 0.6s ease-out;
+  position: relative;
+}
+.anchor-engagement-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.1), transparent);
+  border-radius: inherit;
+}
+.anchor-engagement-bar--empty {
+  background: rgba(255, 255, 255, 0.05);
+}
+.anchor-engagement-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* Feedback Meter */
+.anchor-feedback-meter {
+  padding: var(--space-md) 0;
+}
+.anchor-feedback-bar {
+  height: 20px;
+  background: rgba(244, 67, 54, 0.15);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--space-md);
+}
+.anchor-feedback-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.8s ease-out;
+}
+.anchor-feedback-fill--up {
+  background: linear-gradient(90deg, #66BB6A, var(--teal-accent));
+}
+.anchor-feedback-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Safety Event Log */
+.anchor-safety-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.anchor-safety-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+}
+.anchor-safety-layer {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.anchor-safety-layer--1 {
+  background: rgba(255, 179, 0, 0.15);
+  color: var(--amber-primary);
+}
+.anchor-safety-layer--2 {
+  background: rgba(0, 155, 176, 0.15);
+  color: var(--teal-accent);
+}
+.anchor-safety-layer--3 {
+  background: rgba(244, 67, 54, 0.15);
+  color: #ef5350;
+}
+.anchor-safety-category {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex: 1;
+}
+.anchor-safety-time {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+

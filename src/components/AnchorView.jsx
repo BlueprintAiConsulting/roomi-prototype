@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { anchorSummary as fallbackData } from '../data/sampleData.js';
-import { getAnchorSummary, saveAnchorSummary, getConversations, getUserProfile, getCaregiverResidents } from '../hooks/useFirestore.js';
+import { getAnchorSummary, saveAnchorSummary, getConversations, getUserProfile, getCaregiverResidents, hashUserId } from '../hooks/useFirestore.js';
 import { useAuth } from '../hooks/useAuth.jsx';
 import './AnchorView.css';
 
@@ -172,6 +172,10 @@ export default function AnchorView({ userId }) {
   const [residentName, setResidentName] = useState('Resident');
   const [residentUid, setResidentUid] = useState(null);
   const [error, setError] = useState(null);
+  // Phase 2C: Analytics state
+  const [engagementData, setEngagementData] = useState(null);
+  const [safetyEvents, setSafetyEvents] = useState(null);
+  const [feedbackData, setFeedbackData] = useState(null);
 
   useEffect(() => {
     loadAnchorData();
@@ -239,6 +243,29 @@ export default function AnchorView({ userId }) {
       setData(fallbackData); // Graceful fallback
     } finally {
       setLoading(false);
+    }
+
+    // Phase 2C: Load analytics data in background (non-blocking)
+    loadAnalyticsData(targetUid);
+  }
+
+  // ── Phase 2C: Analytics data loading ──
+  async function loadAnalyticsData(uid) {
+    if (!uid) return;
+    const chatApiUrl = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:3001';
+    const hashedId = await hashUserId(uid);
+
+    try {
+      const [analyticsRes, safetyRes, feedbackRes] = await Promise.all([
+        fetch(`${chatApiUrl}/api/admin/analytics?userId=${hashedId}&days=7`).then(r => r.json()).catch(() => null),
+        fetch(`${chatApiUrl}/api/admin/safety-events?userId=${hashedId}&days=7`).then(r => r.json()).catch(() => null),
+        fetch(`${chatApiUrl}/api/admin/feedback?userId=${hashedId}&days=7`).then(r => r.json()).catch(() => null),
+      ]);
+      if (analyticsRes?.analytics) setEngagementData(analyticsRes.analytics);
+      if (safetyRes?.events) setSafetyEvents(safetyRes.events);
+      if (feedbackRes) setFeedbackData(feedbackRes);
+    } catch (err) {
+      console.warn('[analytics] Failed to load (non-critical):', err.message);
     }
   }
 
@@ -474,6 +501,116 @@ export default function AnchorView({ userId }) {
             </div>
           </div>
         </div>
+
+        {/* ═══ Phase 2C: Analytics Dashboard ═══ */}
+        {(engagementData || safetyEvents || feedbackData) && (
+          <>
+            <div className="anchor-analytics-divider">
+              <span className="anchor-analytics-divider-text">📊 Analytics Dashboard</span>
+            </div>
+
+            <div className="anchor-grid">
+              {/* Engagement Chart — 7 day message counts */}
+              {engagementData && (
+                <div className="anchor-card glass-card anchor-card--engagement">
+                  <div className="anchor-card-header">
+                    <h3>7-Day Engagement</h3>
+                    <span className="anchor-card-status anchor-card-status--good">
+                      {engagementData.reduce((sum, d) => sum + d.turns, 0)} total turns
+                    </span>
+                  </div>
+                  <div className="anchor-engagement-chart">
+                    {engagementData.map((day, i) => {
+                      const maxTurns = Math.max(...engagementData.map(d => d.turns), 1);
+                      const pct = (day.turns / maxTurns) * 100;
+                      const dateLabel = new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+                      return (
+                        <div key={i} className="anchor-engagement-col">
+                          <div className="anchor-engagement-value">{day.turns}</div>
+                          <div className="anchor-engagement-bar-wrapper">
+                            <div
+                              className={`anchor-engagement-bar ${day.turns === 0 ? 'anchor-engagement-bar--empty' : ''}`}
+                              style={{ height: `${Math.max(pct, 4)}%` }}
+                              title={`${day.date}: ${day.turns} turns`}
+                            />
+                          </div>
+                          <div className="anchor-engagement-label">{dateLabel}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Feedback Satisfaction */}
+              {feedbackData && feedbackData.total > 0 && (
+                <div className="anchor-card glass-card anchor-card--feedback">
+                  <div className="anchor-card-header">
+                    <h3>Response Quality</h3>
+                    <span className={`anchor-card-status ${feedbackData.satisfactionRate >= 70 ? 'anchor-card-status--good' : ''}`}>
+                      {feedbackData.satisfactionRate}% positive
+                    </span>
+                  </div>
+                  <div className="anchor-feedback-meter">
+                    <div className="anchor-feedback-bar">
+                      <div
+                        className="anchor-feedback-fill anchor-feedback-fill--up"
+                        style={{ width: `${feedbackData.satisfactionRate}%` }}
+                      />
+                    </div>
+                    <div className="anchor-feedback-labels">
+                      <span>👍 {feedbackData.thumbsUp}</span>
+                      <span>👎 {feedbackData.thumbsDown}</span>
+                    </div>
+                  </div>
+                  <div className="anchor-mood-note" style={{ marginTop: '8px' }}>
+                    Based on {feedbackData.total} ratings over the last 7 days
+                  </div>
+                </div>
+              )}
+
+              {/* Safety Event Log */}
+              {safetyEvents && safetyEvents.length > 0 && (
+                <div className="anchor-card glass-card anchor-card--safety">
+                  <div className="anchor-card-header">
+                    <h3>Safety Interceptions</h3>
+                    <span className="anchor-card-status">{safetyEvents.length} events</span>
+                  </div>
+                  <div className="anchor-safety-list">
+                    {safetyEvents.slice(0, 5).map((evt, i) => (
+                      <div key={i} className="anchor-safety-item">
+                        <span className={`anchor-safety-layer anchor-safety-layer--${evt.layer}`}>
+                          L{evt.layer}
+                        </span>
+                        <span className="anchor-safety-category">{evt.category}</span>
+                        <span className="anchor-safety-time">
+                          {evt.timestamp ? new Date(evt.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="anchor-mood-note" style={{ marginTop: '8px' }}>
+                    Safety layers preventing harmful content — this is working as designed
+                  </div>
+                </div>
+              )}
+
+              {/* No safety events — positive note */}
+              {safetyEvents && safetyEvents.length === 0 && (
+                <div className="anchor-card glass-card anchor-card--safety">
+                  <div className="anchor-card-header">
+                    <h3>Safety Status</h3>
+                    <span className="anchor-card-status anchor-card-status--good">All clear</span>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>🛡️</div>
+                    <div className="anchor-mood-note">No safety events in the last 7 days — all conversations stayed within safe boundaries.</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         {/* Footer note */}
         <div className="anchor-footer-note glass-card">
