@@ -133,6 +133,14 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // ─── systemPrompts (Phase 2B) ───────────────────────────────
+    // Read-only for authenticated users (to load active prompt).
+    // Write-only via Firebase Admin SDK (console or backend).
+    match /systemPrompts/{docId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if false;
+    }
+
     // ─── Catch-all: deny everything else ────────────────────────
     match /{document=**} {
       allow read, write: if false;

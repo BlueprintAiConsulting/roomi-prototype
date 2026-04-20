@@ -378,25 +378,78 @@ export async function logSafetyEvent(uid, data) {
   }
 }
 
+// ─── System Prompt Management ───────────────────────────────
+// Versioned system prompts stored in Firestore for A/B testing
+
+let _cachedPrompt = null;
+let _cachedPromptTime = 0;
+const PROMPT_CACHE_TTL = 5 * 60 * 1000; // 5-minute cache
+
+export async function getActiveSystemPrompt() {
+  if (!db) return null;
+
+  // Return cached if fresh
+  if (_cachedPrompt && (Date.now() - _cachedPromptTime < PROMPT_CACHE_TTL)) {
+    return _cachedPrompt;
+  }
+
+  try {
+    const q = query(
+      collection(db, 'systemPrompts'),
+      where('isActive', '==', true),
+      orderBy('version', 'desc'),
+      limit(1)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+
+    const promptData = { id: snap.docs[0].id, ...snap.docs[0].data() };
+    _cachedPrompt = promptData;
+    _cachedPromptTime = Date.now();
+    return promptData;
+  } catch (err) {
+    console.error('Error loading system prompt:', err);
+    return null;
+  }
+}
+
+export async function listSystemPromptVersions() {
+  if (!db) return [];
+  try {
+    const q = query(
+      collection(db, 'systemPrompts'),
+      orderBy('version', 'desc'),
+      limit(20)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error('Error listing system prompts:', err);
+    return [];
+  }
+}
+
 // ─── Custom hook wrapper ────────────────────────────────────
 
 export function useFirestore() {
   return {
-    saveUserProfile:      useCallback(saveUserProfile, []),
-    getUserProfile:       useCallback(getUserProfile, []),
-    saveConversation:     useCallback(saveConversation, []),
-    getConversations:     useCallback(getConversations, []),
-    saveAnchorSummary:    useCallback(saveAnchorSummary, []),
-    getAnchorSummary:     useCallback(getAnchorSummary, []),
-    saveDailySummary:     useCallback(saveDailySummary, []),
-    getRecentSummaries:   useCallback(getRecentSummaries, []),
-    saveLearnedFacts:     useCallback(saveLearnedFacts, []),
-    getLearnedFacts:      useCallback(getLearnedFacts, []),
-    saveWeeklySummary:    useCallback(saveWeeklySummary, []),
-    getWeeklySummaries:   useCallback(getWeeklySummaries, []),
-    logAnalyticsTurn:     useCallback(logAnalyticsTurn, []),
-    logFeedback:          useCallback(logFeedback, []),
-    logSafetyEvent:       useCallback(logSafetyEvent, []),
+    saveUserProfile:          useCallback(saveUserProfile, []),
+    getUserProfile:           useCallback(getUserProfile, []),
+    saveConversation:         useCallback(saveConversation, []),
+    getConversations:         useCallback(getConversations, []),
+    saveAnchorSummary:        useCallback(saveAnchorSummary, []),
+    getAnchorSummary:         useCallback(getAnchorSummary, []),
+    saveDailySummary:         useCallback(saveDailySummary, []),
+    getRecentSummaries:       useCallback(getRecentSummaries, []),
+    saveLearnedFacts:         useCallback(saveLearnedFacts, []),
+    getLearnedFacts:          useCallback(getLearnedFacts, []),
+    saveWeeklySummary:        useCallback(saveWeeklySummary, []),
+    getWeeklySummaries:       useCallback(getWeeklySummaries, []),
+    getActiveSystemPrompt:    useCallback(getActiveSystemPrompt, []),
+    listSystemPromptVersions: useCallback(listSystemPromptVersions, []),
+    logAnalyticsTurn:         useCallback(logAnalyticsTurn, []),
+    logFeedback:              useCallback(logFeedback, []),
+    logSafetyEvent:           useCallback(logSafetyEvent, []),
   };
 }
 

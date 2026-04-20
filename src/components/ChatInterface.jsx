@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { demoConversations, dailySchedule, userProfile } from '../data/sampleData.js';
-import { saveConversation, getConversations, saveDailySummary, getRecentSummaries, saveLearnedFacts, getLearnedFacts, getWeeklySummaries, saveWeeklySummary, logAnalyticsTurn, logFeedback, logSafetyEvent } from '../hooks/useFirestore.js';
+import { saveConversation, getConversations, saveDailySummary, getRecentSummaries, saveLearnedFacts, getLearnedFacts, getWeeklySummaries, saveWeeklySummary, getActiveSystemPrompt, logAnalyticsTurn, logFeedback, logSafetyEvent } from '../hooks/useFirestore.js';
 import { buildKnowledgePrompt } from '../data/roomiKnowledge.js';
 import VoiceMode from './VoiceMode.jsx';
 import NotificationPrompt from './NotificationPrompt.jsx';
@@ -90,6 +90,7 @@ export default function ChatInterface({ userData, userId }) {
   const summaryFiredRef = useRef(false); // prevent double summary in one session
   const turnCountRef = useRef(0);        // Phase 1: turn index for analytics
   const sendStartTimeRef = useRef(0);    // Phase 1: response time measurement
+  const [dynamicPromptTemplate, setDynamicPromptTemplate] = useState(null); // Firestore-sourced prompt
 
   // ─── Dynamic user context ─────────────────────────────────
   // Use onboarded/Firestore data when available, fall back to sampleData for demo
@@ -126,22 +127,27 @@ export default function ChatInterface({ userData, userId }) {
     };
   }, []);
 
-  // ─── Load cross-session memory on mount ─────────────────────
+  // ─── Load cross-session memory + dynamic prompt on mount ────
   useEffect(() => {
     if (!userId) return;
     (async () => {
       try {
-        // Load all memory layers in parallel
-        const [summaries, facts, weekly] = await Promise.all([
+        // Load all memory layers + dynamic prompt in parallel
+        const [summaries, facts, weekly, promptDoc] = await Promise.all([
           getRecentSummaries(userId, 7),
           getLearnedFacts(userId),
           getWeeklySummaries(userId, 4),
+          getActiveSystemPrompt(),
         ]);
         setRecentMemory(summaries);
         setLearnedFacts(facts);
         setWeeklyMemory(weekly);
+        if (promptDoc?.template) {
+          setDynamicPromptTemplate(promptDoc.template);
+          console.log(`[prompt] Loaded v${promptDoc.version} from Firestore`);
+        }
       } catch (err) {
-        console.warn('Could not load memory:', err);
+        console.warn('Could not load memory/prompt:', err);
       }
     })();
   }, [userId]);
@@ -611,6 +617,33 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
 - DO use words like: your day, your routine, how you're feeling, what's next, let's figure it out together
 - NEVER start a response with "I" — vary your sentence starters`;
 
+  // ─── Dynamic prompt override (from Firestore) ──────────────
+  // If a prompt template exists in Firestore, interpolate user variables into it
+  // and use it instead of the hardcoded prompt. Falls back to hardcoded if none exists.
+  const ACTIVE_SYSTEM_PROMPT = (() => {
+    if (!dynamicPromptTemplate) return ROOMI_SYSTEM_PROMPT;
+
+    try {
+      // Interpolate {{variables}} in the Firestore template
+      return dynamicPromptTemplate
+        .replace(/\{\{fullName\}\}/g, fullName)
+        .replace(/\{\{userName\}\}/g, userName)
+        .replace(/\{\{anchorName\}\}/g, anchorName)
+        .replace(/\{\{anchorFirstName\}\}/g, anchorFirstName)
+        .replace(/\{\{wakeTime\}\}/g, userWakeTime)
+        .replace(/\{\{factsSection\}\}/g, factsSection)
+        .replace(/\{\{medsSection\}\}/g, medsSection)
+        .replace(/\{\{dailyMemory\}\}/g, dailyMemory)
+        .replace(/\{\{weeklyMemory\}\}/g, weeklyMem)
+        .replace(/\{\{scenario\}\}/g, activeScenarioData?.name || 'General')
+        .replace(/\{\{scenarioContext\}\}/g, scenarioContext[activeScenario] || 'Have a natural, supportive conversation.')
+        .replace(/\{\{knowledgePrompt\}\}/g, buildKnowledgePrompt());
+    } catch (err) {
+      console.warn('[prompt] Template interpolation failed, using hardcoded:', err);
+      return ROOMI_SYSTEM_PROMPT;
+    }
+  })();
+
   // ═══════════════════════════════════════════════════════════
   // LAYER 3: RESPONSE VALIDATION (EXPANDED)
   // Catches any Gemini output that slipped past the prompt
@@ -872,7 +905,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
         const endpoint = `${chatApiUrl}/api/chat`;
 
         const body = {
-          systemPrompt: ROOMI_SYSTEM_PROMPT,
+          systemPrompt: ACTIVE_SYSTEM_PROMPT,
           contents: conversationHistoryRef.current,
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
@@ -985,7 +1018,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
     setMessages(prev => [...prev, { sender: 'roomi', text: fallback, id: Date.now() + 1 }]);
     playNotificationSound();
     console.error('Gemini API failed after retries:', lastError);
-  }, [inputValue, checkSafetyFilters, validateResponse, isOffline, checkRateLimit, triggerMemoryCapture, userName, userId, activeScenario, notifPromptShown, ROOMI_SYSTEM_PROMPT]);
+  }, [inputValue, checkSafetyFilters, validateResponse, isOffline, checkRateLimit, triggerMemoryCapture, userName, userId, activeScenario, notifPromptShown, ACTIVE_SYSTEM_PROMPT]);
 
   const handleScenarioSelect = (id) => {
     setActiveScenario(id);
