@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { demoConversations, dailySchedule, userProfile } from '../data/sampleData.js';
-import { saveConversation, getConversations, saveDailySummary, getRecentSummaries, logAnalyticsTurn, logFeedback, logSafetyEvent } from '../hooks/useFirestore.js';
+import { saveConversation, getConversations, saveDailySummary, getRecentSummaries, saveLearnedFacts, getLearnedFacts, getWeeklySummaries, saveWeeklySummary, logAnalyticsTurn, logFeedback, logSafetyEvent } from '../hooks/useFirestore.js';
 import { buildKnowledgePrompt } from '../data/roomiKnowledge.js';
 import VoiceMode from './VoiceMode.jsx';
 import NotificationPrompt from './NotificationPrompt.jsx';
@@ -80,11 +80,14 @@ export default function ChatInterface({ userData, userId }) {
   const [isOffline, setIsOffline] = useState(typeof navigator !== 'undefined' ? !navigator.onLine : false);
   const [rateLimited, setRateLimited] = useState(false);
   const [firestoreLoaded, setFirestoreLoaded] = useState(false);
-  const [recentMemory, setRecentMemory] = useState([]); // cross-session summaries
+  const [recentMemory, setRecentMemory] = useState([]); // cross-session summaries (7 days)
+  const [learnedFacts, setLearnedFacts] = useState([]); // extracted personal facts
+  const [weeklyMemory, setWeeklyMemory] = useState([]); // compressed weekly summaries
   const messageTsRef = useRef([]); // timestamps for rate limiting
   const typingTimeoutRef = useRef(null);
   const retryCountRef = useRef(0);
   const sessionMsgCountRef = useRef(0); // track messages for summary trigger
+  const summaryFiredRef = useRef(false); // prevent double summary in one session
   const turnCountRef = useRef(0);        // Phase 1: turn index for analytics
   const sendStartTimeRef = useRef(0);    // Phase 1: response time measurement
 
@@ -128,37 +131,69 @@ export default function ChatInterface({ userData, userId }) {
     if (!userId) return;
     (async () => {
       try {
-        const summaries = await getRecentSummaries(userId, 3);
+        // Load all memory layers in parallel
+        const [summaries, facts, weekly] = await Promise.all([
+          getRecentSummaries(userId, 7),
+          getLearnedFacts(userId),
+          getWeeklySummaries(userId, 4),
+        ]);
         setRecentMemory(summaries);
+        setLearnedFacts(facts);
+        setWeeklyMemory(weekly);
       } catch (err) {
         console.warn('Could not load memory:', err);
       }
     })();
   }, [userId]);
 
-  // ─── Save daily summary on unmount (if enough messages) ────
-  useEffect(() => {
-    return () => {
-      if (!userId || sessionMsgCountRef.current < 4) return;
-      // Fire-and-forget summary generation
-      const msgs = conversationHistoryRef.current
-        .filter(m => m.parts?.[0]?.text)
-        .map(m => ({ sender: m.role === 'model' ? 'roomi' : 'user', text: m.parts[0].text }));
-      if (msgs.length < 4) return;
+  // ─── In-session memory generation ─────────────────────────
+  // Called after every 5th user message — generates summary + extracts facts
+  const triggerMemoryCapture = useCallback(async () => {
+    if (!userId || summaryFiredRef.current) return;
+    const msgs = conversationHistoryRef.current
+      .filter(m => m.parts?.[0]?.text)
+      .map(m => ({ sender: m.role === 'model' ? 'roomi' : 'user', text: m.parts[0].text }));
+    if (msgs.length < 4) return;
 
-      const chatApiUrl = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:3001';
-      fetch(`${chatApiUrl}/api/summarize`, {
+    summaryFiredRef.current = true; // prevent duplicate triggers
+    const chatApiUrl = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:3001';
+
+    try {
+      // Generate daily summary
+      const summaryRes = await fetch(`${chatApiUrl}/api/summarize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: msgs, userName }),
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (data.summary) saveDailySummary(userId, data.summary);
-        })
-        .catch(() => {}); // best-effort
-    };
-  }, [userId, userName]);
+      });
+      const summaryData = await summaryRes.json();
+      if (summaryData.summary) {
+        saveDailySummary(userId, summaryData.summary);
+        console.log('[memory] Daily summary saved');
+      }
+
+      // Extract new facts from the conversation
+      const allFacts = [
+        ...(userData?.personalFacts || []),
+        ...learnedFacts,
+      ];
+      const factsRes = await fetch(`${chatApiUrl}/api/extract-facts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: msgs, userName, existingFacts: allFacts }),
+      });
+      const factsData = await factsRes.json();
+      if (factsData.facts?.length > 0) {
+        saveLearnedFacts(userId, factsData.facts);
+        setLearnedFacts(prev => [...prev, ...factsData.facts]);
+        console.log(`[memory] Extracted ${factsData.facts.length} new facts`);
+      }
+    } catch (err) {
+      console.warn('[memory] Capture failed (non-critical):', err.message);
+    }
+
+    // Allow another trigger after 5 more messages
+    setTimeout(() => { summaryFiredRef.current = false; }, 1000);
+  }, [userId, userName, userData, learnedFacts]);
 
   // ─── Global keyboard shortcuts ─────────────────────────────
   useEffect(() => {
@@ -487,9 +522,13 @@ export default function ChatInterface({ userData, userId }) {
     freeChat:   `Open, casual conversation. No specific agenda. Just be a warm, familiar presence. Follow their lead — if they want to chat about their day, their interests, or just hang out, go with it. Keep it light and natural.`
   };
 
-  // Build personal facts section
-  const factsSection = userFacts.length > 0
-    ? userFacts.map(f => `- ${f}`).join('\n')
+  // Build personal facts section (onboarding + learned)
+  const allPersonalFacts = [
+    ...userFacts,
+    ...learnedFacts,
+  ];
+  const factsSection = allPersonalFacts.length > 0
+    ? allPersonalFacts.map(f => `- ${f}`).join('\n')
     : '- Enjoys routine and familiar activities';
 
   // Build medications section (only if user has meds)
@@ -497,18 +536,25 @@ export default function ChatInterface({ userData, userId }) {
     ? `- Takes ${userMeds.map(m => `${m.name} ${m.dosage}`).join(' and ')} each morning`
     : '- No medications tracked currently';
 
-  // Build memory section from recent daily summaries
-  const memorySection = recentMemory.length > 0
+  // Build memory section — 3 tiers: daily (7 days) + weekly (4 weeks)
+  const dailyMemory = recentMemory.length > 0
     ? recentMemory.map(s => `- ${s.date}: ${s.summary}`).join('\n')
+    : '';
+  const weeklyMem = weeklyMemory.length > 0
+    ? weeklyMemory.map(w => `- Week of ${w.weekStart}: ${w.summary}`).join('\n')
     : '';
 
   const ROOMI_SYSTEM_PROMPT = `You are ROOMI — a daily companion for ${fullName} (they go by "${userName}"). ${fullName} is a person with intellectual and developmental differences (IDD). You are their warm, familiar companion who knows them personally. You are NOT a therapist, NOT a medical professional, NOT an assistant.
 
 ${buildKnowledgePrompt()}
-${memorySection ? `
-## RECENT MEMORY (things you know from past conversations)
+${dailyMemory ? `
+## RECENT MEMORY (last 7 days)
 Use these naturally — don't list them, just reference them when relevant. If they mention something from a past day, connect to it.
-${memorySection}
+${dailyMemory}
+` : ''}${weeklyMem ? `
+## OLDER MEMORY (weekly summaries)
+These are compressed memories from past weeks. Use them for long-term context — patterns, recurring interests, and progress.
+${weeklyMem}
 ` : ''}
 
 ## YOUR VOICE
@@ -772,6 +818,11 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
     setMessages(prev => [...prev, { sender: 'user', text: userText, id: Date.now() }]);
     sessionMsgCountRef.current++;
 
+    // Trigger memory capture every 5th user message (non-blocking)
+    if (sessionMsgCountRef.current > 0 && sessionMsgCountRef.current % 5 === 0) {
+      triggerMemoryCapture(); // fire-and-forget, doesn't block chat
+    }
+
     // LAYER 1: Check safety filters before sending to Gemini
     const safetyCheck = checkSafetyFilters(userText);
     if (safetyCheck.intercepted) {
@@ -934,7 +985,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
     setMessages(prev => [...prev, { sender: 'roomi', text: fallback, id: Date.now() + 1 }]);
     playNotificationSound();
     console.error('Gemini API failed after retries:', lastError);
-  }, [inputValue, checkSafetyFilters, validateResponse, isOffline, checkRateLimit, userName, userId, activeScenario, notifPromptShown, ROOMI_SYSTEM_PROMPT]);
+  }, [inputValue, checkSafetyFilters, validateResponse, isOffline, checkRateLimit, triggerMemoryCapture, userName, userId, activeScenario, notifPromptShown, ROOMI_SYSTEM_PROMPT]);
 
   const handleScenarioSelect = (id) => {
     setActiveScenario(id);

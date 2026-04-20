@@ -178,6 +178,137 @@ ${transcript}`;
   }
 });
 
+// ─── Fact Extraction API ────────────────────────────────────
+// Extracts new personal facts from a conversation for long-term memory
+app.post('/api/extract-facts', async (req, res) => {
+  try {
+    const { messages, userName, existingFacts } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length < 2) {
+      return res.status(400).json({ error: 'Need at least 2 messages.', facts: [] });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Server configuration error.', facts: [] });
+    }
+
+    const transcript = messages
+      .map(m => `${m.sender === 'roomi' ? 'ROOMI' : (userName || 'User')}: ${m.text}`)
+      .join('\n');
+
+    const existingList = (existingFacts || []).map(f => `- ${f}`).join('\n') || '(none yet)';
+
+    const extractPrompt = `You are extracting personal facts about ${userName || 'the user'} from a conversation with their AI companion ROOMI. 
+
+EXISTING KNOWN FACTS:
+${existingList}
+
+CONVERSATION:
+${transcript}
+
+Extract NEW personal facts that are NOT already in the existing facts list. Only include facts that are:
+- Specific and personal (names of pets, family members, favorite things, new events)
+- Stated by the user (not assumptions by ROOMI)
+- Worth remembering for future conversations
+
+Return ONLY a JSON array of short fact strings. Keep each fact under 15 words.
+If there are no new facts, return an empty array: []
+
+Examples of good facts:
+["Got a new puppy named Luna", "Favorite movie is Frozen 2", "Started a new art class on Tuesdays", "Sister Emily visited last weekend"]
+
+Return ONLY the JSON array, no other text.`;
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
+
+    const geminiRes = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: extractPrompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 200 },
+      }),
+    });
+
+    const data = await geminiRes.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '[]';
+
+    // Parse the JSON array — handle markdown code fences if Gemini wraps it
+    let facts = [];
+    try {
+      const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      facts = JSON.parse(cleaned);
+      if (!Array.isArray(facts)) facts = [];
+      // Sanitize: only short strings
+      facts = facts.filter(f => typeof f === 'string' && f.length > 2 && f.length < 200).slice(0, 10);
+    } catch {
+      facts = [];
+    }
+
+    return res.json({ facts });
+  } catch (err) {
+    console.error('[extract-facts] Error:', err.message);
+    return res.status(500).json({ error: 'Failed to extract facts.', facts: [] });
+  }
+});
+
+// ─── Memory Compression API ────────────────────────────────
+// Compresses 7 daily summaries into a single weekly summary
+app.post('/api/compress-memory', async (req, res) => {
+  try {
+    const { summaries, userName } = req.body;
+
+    if (!summaries || !Array.isArray(summaries) || summaries.length < 2) {
+      return res.status(400).json({ error: 'Need at least 2 summaries to compress.', weekly: '' });
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'Server configuration error.', weekly: '' });
+    }
+
+    const summaryList = summaries
+      .map(s => `${s.date}: ${s.summary}`)
+      .join('\n');
+
+    const compressPrompt = `You are compressing a week of daily notes about ${userName || 'a person'} into a single weekly summary. These notes come from their AI companion's observations.
+
+DAILY SUMMARIES:
+${summaryList}
+
+Write a 2-3 sentence weekly summary that captures the most important patterns and events. Focus on:
+- Overall mood trend (improving, stable, struggling)
+- Key events or milestones
+- Routine consistency (meds, sleep, activities)
+- Any concerns worth noting
+
+Write it as a warm, brief note — not clinical. Example:
+"${userName || 'User'} had a steady week overall. Took meds consistently and seemed to enjoy the new art class on Tuesday. Got a bit overwhelmed on Thursday but recovered well by Friday evening."
+
+Return ONLY the summary paragraph, no labels or formatting.`;
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1/models/${CHAT_MODEL}:generateContent?key=${apiKey}`;
+
+    const geminiRes = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: compressPrompt }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 150 },
+      }),
+    });
+
+    const data = await geminiRes.json();
+    const weekly = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+
+    return res.json({ weekly });
+  } catch (err) {
+    console.error('[compress-memory] Error:', err.message);
+    return res.status(500).json({ error: 'Failed to compress memory.', weekly: '' });
+  }
+});
+
 const httpServer = createServer(app);
 const wss = new WebSocketServer({ server: httpServer });
 

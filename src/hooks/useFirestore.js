@@ -203,7 +203,7 @@ export async function saveDailySummary(uid, summaryText) {
   }
 }
 
-export async function getRecentSummaries(uid, days = 3) {
+export async function getRecentSummaries(uid, days = 7) {
   if (!db || !uid) return [];
 
   try {
@@ -218,6 +218,81 @@ export async function getRecentSummaries(uid, days = 3) {
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (err) {
     console.error('Error loading recent summaries:', err);
+    return [];
+  }
+}
+
+// ─── Learned Facts (Persistent Memory) ──────────────────────
+// Facts extracted from conversations — stored on user profile
+
+export async function saveLearnedFacts(uid, newFacts) {
+  if (!db || !uid || !newFacts?.length) return;
+  try {
+    // Read existing facts first to deduplicate
+    const snap = await getDoc(doc(db, 'users', uid));
+    const existing = snap.exists() ? (snap.data().learnedFacts || []) : [];
+
+    // Deduplicate by lowercase comparison
+    const existingLower = new Set(existing.map(f => f.toLowerCase().trim()));
+    const uniqueNew = newFacts.filter(f => !existingLower.has(f.toLowerCase().trim()));
+
+    if (uniqueNew.length === 0) return;
+
+    // Merge and cap at 50 facts (oldest drop off)
+    const merged = [...existing, ...uniqueNew].slice(-50);
+
+    await setDoc(doc(db, 'users', uid), {
+      learnedFacts: merged,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    console.log(`[memory] Saved ${uniqueNew.length} new facts for user`);
+  } catch (err) {
+    console.error('Error saving learned facts:', err);
+  }
+}
+
+export async function getLearnedFacts(uid) {
+  if (!db || !uid) return [];
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    return snap.exists() ? (snap.data().learnedFacts || []) : [];
+  } catch (err) {
+    console.error('Error loading learned facts:', err);
+    return [];
+  }
+}
+
+// ─── Weekly Summaries (Compressed Memory) ───────────────────
+
+export async function saveWeeklySummary(uid, weekStartDate, summaryText) {
+  if (!db || !uid || !summaryText) return;
+  try {
+    const docId = `${uid}_${weekStartDate}`;
+    await setDoc(doc(db, 'weeklySummaries', docId), {
+      userId: uid,
+      weekStart: weekStartDate,
+      summary: summaryText,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (err) {
+    console.error('Error saving weekly summary:', err);
+  }
+}
+
+export async function getWeeklySummaries(uid, weeks = 4) {
+  if (!db || !uid) return [];
+  try {
+    const q = query(
+      collection(db, 'weeklySummaries'),
+      where('userId', '==', uid),
+      orderBy('weekStart', 'desc'),
+      limit(weeks)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error('Error loading weekly summaries:', err);
     return [];
   }
 }
@@ -307,17 +382,21 @@ export async function logSafetyEvent(uid, data) {
 
 export function useFirestore() {
   return {
-    saveUserProfile:    useCallback(saveUserProfile, []),
-    getUserProfile:     useCallback(getUserProfile, []),
-    saveConversation:   useCallback(saveConversation, []),
-    getConversations:   useCallback(getConversations, []),
-    saveAnchorSummary:  useCallback(saveAnchorSummary, []),
-    getAnchorSummary:   useCallback(getAnchorSummary, []),
-    saveDailySummary:   useCallback(saveDailySummary, []),
-    getRecentSummaries: useCallback(getRecentSummaries, []),
-    logAnalyticsTurn:   useCallback(logAnalyticsTurn, []),
-    logFeedback:        useCallback(logFeedback, []),
-    logSafetyEvent:     useCallback(logSafetyEvent, []),
+    saveUserProfile:      useCallback(saveUserProfile, []),
+    getUserProfile:       useCallback(getUserProfile, []),
+    saveConversation:     useCallback(saveConversation, []),
+    getConversations:     useCallback(getConversations, []),
+    saveAnchorSummary:    useCallback(saveAnchorSummary, []),
+    getAnchorSummary:     useCallback(getAnchorSummary, []),
+    saveDailySummary:     useCallback(saveDailySummary, []),
+    getRecentSummaries:   useCallback(getRecentSummaries, []),
+    saveLearnedFacts:     useCallback(saveLearnedFacts, []),
+    getLearnedFacts:      useCallback(getLearnedFacts, []),
+    saveWeeklySummary:    useCallback(saveWeeklySummary, []),
+    getWeeklySummaries:   useCallback(getWeeklySummaries, []),
+    logAnalyticsTurn:     useCallback(logAnalyticsTurn, []),
+    logFeedback:          useCallback(logFeedback, []),
+    logSafetyEvent:       useCallback(logSafetyEvent, []),
   };
 }
 
