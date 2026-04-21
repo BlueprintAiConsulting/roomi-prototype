@@ -2,10 +2,15 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { demoConversations, dailySchedule, userProfile } from '../data/sampleData.js';
 import { saveConversation, getConversations, saveDailySummary, getRecentSummaries, saveLearnedFacts, getLearnedFacts, getWeeklySummaries, saveWeeklySummary, getActiveSystemPrompt, logAnalyticsTurn, logFeedback, logSafetyEvent } from '../hooks/useFirestore.js';
 import { buildKnowledgePrompt } from '../data/roomiKnowledge.js';
+import { GoogleGenAI } from '@google/genai';
 import VoiceMode from './VoiceMode.jsx';
 import NotificationPrompt from './NotificationPrompt.jsx';
 import FeedbackButtons from './FeedbackButtons.jsx';
 import './ChatInterface.css';
+
+// ─── Gemini client (direct browser calls, no server needed) ──
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const genai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 const SCENARIOS = [
   { id: 'morning',    label: '🌅 Morning',  name: 'Morning Check-In',   icon: '🌅', short: 'Morning'  },
@@ -900,55 +905,81 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
 
     while (attempt <= maxRetries) {
       try {
-        // Route through server proxy — API key stays server-side
-        const chatApiUrl = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:3001';
-        const endpoint = `${chatApiUrl}/api/chat`;
-
-        const body = {
-          systemPrompt: ACTIVE_SYSTEM_PROMPT,
-          contents: conversationHistoryRef.current,
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-          ],
-          generationConfig: {
-            temperature: 0.45,
-            maxOutputTokens: 512,
-            topP: 0.85,
-            stopSequences: ['\n\n\n'],
-          },
-        };
-
-        const controller = new AbortController();
-        const fetchTimeout = setTimeout(() => controller.abort(), 12000); // 12s timeout (server has 12s too)
-
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        });
-
-        clearTimeout(fetchTimeout);
-
-        if (res.status === 429) {
-          // Server-side rate limit
-          throw new Error('Rate limited by server');
-        }
-
-        const data = await res.json();
-
-        // Check if response was blocked by safety filters
-        const blockReason = data?.candidates?.[0]?.finishReason;
         let roomiText;
 
-        if (blockReason === 'SAFETY' || !data?.candidates?.[0]?.content) {
-          roomiText = `I'm not sure how to help with that one, ${userName}. Want to talk about what's next on your day instead? 🦊`;
+        if (genai) {
+          // ─── Direct Gemini call (no server needed) ─────────
+          const response = await genai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: conversationHistoryRef.current,
+            config: {
+              systemInstruction: ACTIVE_SYSTEM_PROMPT,
+              safetySettings: [
+                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              ],
+              temperature: 0.45,
+              maxOutputTokens: 512,
+              topP: 0.85,
+              stopSequences: ['\n\n\n'],
+            },
+          });
+
+          const blockReason = response?.candidates?.[0]?.finishReason;
+          if (blockReason === 'SAFETY' || !response?.candidates?.[0]?.content) {
+            roomiText = `I'm not sure how to help with that one, ${userName}. Want to talk about what's next on your day instead? 🦊`;
+          } else {
+            roomiText = response?.text?.trim()
+              || response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+              || `I'm here, ${userName}. What do you need right now?`;
+          }
         } else {
-          roomiText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
-            || `I'm here, ${userName}. What do you need right now?`;
+          // ─── Fall back to server proxy ─────────────────────
+          const chatApiUrl = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:3001';
+          const endpoint = `${chatApiUrl}/api/chat`;
+
+          const body = {
+            systemPrompt: ACTIVE_SYSTEM_PROMPT,
+            contents: conversationHistoryRef.current,
+            safetySettings: [
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            ],
+            generationConfig: {
+              temperature: 0.45,
+              maxOutputTokens: 512,
+              topP: 0.85,
+              stopSequences: ['\n\n\n'],
+            },
+          };
+
+          const controller = new AbortController();
+          const fetchTimeout = setTimeout(() => controller.abort(), 12000);
+
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+
+          clearTimeout(fetchTimeout);
+
+          if (res.status === 429) throw new Error('Rate limited by server');
+
+          const data = await res.json();
+          const blockReason = data?.candidates?.[0]?.finishReason;
+
+          if (blockReason === 'SAFETY' || !data?.candidates?.[0]?.content) {
+            roomiText = `I'm not sure how to help with that one, ${userName}. Want to talk about what's next on your day instead? 🦊`;
+          } else {
+            roomiText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+              || `I'm here, ${userName}. What do you need right now?`;
+          }
         }
 
         // LAYER 3: Validate Gemini's response
