@@ -4,6 +4,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp, getDocs, limit } from 'firebase/firestore';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject, listAll } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,12 +16,13 @@ const firebaseConfig = {
 };
 
 // Only initialize if we have a project ID (allows graceful fallback to demo mode)
-let app, db, auth;
+let app, db, auth, storage;
 
 if (firebaseConfig.projectId) {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
   auth = getAuth(app);
+  storage = getStorage(app);
 } else {
   console.warn('ROOMI: Firebase not configured — running in demo mode (no persistence)');
 }
@@ -30,6 +32,7 @@ const googleProvider = new GoogleAuthProvider();
 export {
   db,
   auth,
+  storage,
   googleProvider,
   // Auth methods
   signInWithPopup,
@@ -53,4 +56,10 @@ export {
   getDocs,
   limit,
   serverTimestamp,
+  // Storage methods
+  storageRef,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+  listAll,
 };

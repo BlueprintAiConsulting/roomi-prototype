@@ -1,0 +1,792 @@
+/* FounderHub.css — Glassmorphism dashboard for ROOMI Founder Hub */
+
+/* ─── Layout ─────────────────────────────────────────────── */
+
+.hub {
+  min-height: 100vh;
+  padding: 100px 24px 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hub-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.hub-header-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 8px;
+  animation: hubPulse 3s ease-in-out infinite;
+}
+
+@keyframes hubPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(255, 176, 0, 0.3)); }
+  50% { transform: scale(1.06); filter: drop-shadow(0 0 18px rgba(255, 176, 0, 0.6)); }
+}
+
+.hub-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #ffb000, #ff6b00);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 4px;
+}
+
+.hub-subtitle {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  font-family: 'Nunito', sans-serif;
+}
+
+/* ─── Tab Bar ────────────────────────────────────────────── */
+
+.hub-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 28px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hub-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.hub-tab {
+  flex: 0 0 auto;
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hub-tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.hub-tab--active {
+  color: #ffb000;
+  background: rgba(255, 176, 0, 0.12);
+  box-shadow: 0 0 20px rgba(255, 176, 0, 0.08);
+}
+
+.hub-tab-icon {
+  font-size: 1.1rem;
+}
+
+.hub-tab-badge {
+  font-size: 0.65rem;
+  background: rgba(255, 176, 0, 0.25);
+  color: #ffb000;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-weight: 800;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* ─── Glass Card Base ────────────────────────────────────── */
+
+.hub-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  padding: 28px;
+  animation: hubFadeIn 0.35s ease;
+}
+
+@keyframes hubFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hub-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.hub-panel-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+}
+
+/* ─── Action Button ──────────────────────────────────────── */
+
+.hub-btn-new {
+  padding: 8px 20px;
+  border: none;
+  background: linear-gradient(135deg, #ffb000, #ff8c00);
+  color: #1a1a2e;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hub-btn-new:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 176, 0, 0.3);
+}
+
+.hub-btn-new:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.hub-btn-cancel {
+  padding: 8px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hub-btn-cancel:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.hub-btn-delete {
+  padding: 4px 10px;
+  border: none;
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Nunito', sans-serif;
+}
+
+.hub-btn-delete:hover {
+  background: rgba(231, 76, 60, 0.3);
+}
+
+.hub-btn-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* ─── Forms ──────────────────────────────────────────────── */
+
+.hub-form {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 176, 0, 0.15);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  animation: hubFadeIn 0.3s ease;
+}
+
+.hub-form-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #ffb000;
+  margin: 0 0 16px;
+}
+
+.hub-form-row {
+  margin-bottom: 14px;
+}
+
+.hub-form-label {
+  display: block;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.hub-form-input,
+.hub-form-textarea,
+.hub-form-select {
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.88rem;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.hub-form-input:focus,
+.hub-form-textarea:focus,
+.hub-form-select:focus {
+  outline: none;
+  border-color: rgba(255, 176, 0, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 176, 0, 0.08);
+}
+
+.hub-form-textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.hub-form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='rgba(255,255,255,0.4)' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.hub-form-select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
+.hub-form-row-inline {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* ─── File Upload Dropzone ───────────────────────────────── */
+
+.hub-dropzone {
+  border: 2px dashed rgba(255, 176, 0, 0.2);
+  border-radius: 16px;
+  padding: 40px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.hub-dropzone:hover,
+.hub-dropzone--active {
+  border-color: rgba(255, 176, 0, 0.5);
+  background: rgba(255, 176, 0, 0.04);
+}
+
+.hub-dropzone--active {
+  animation: dropPulse 1s ease-in-out infinite;
+}
+
+@keyframes dropPulse {
+  0%, 100% { background: rgba(255, 176, 0, 0.04); }
+  50% { background: rgba(255, 176, 0, 0.08); }
+}
+
+.hub-dropzone-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.hub-dropzone-text {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 4px;
+}
+
+.hub-dropzone-hint {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.hub-dropzone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.hub-upload-progress {
+  margin-top: 12px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.hub-upload-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #ffb000, #ff6b00);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  animation: uploadShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes uploadShimmer {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+/* ─── Item Cards (list items) ────────────────────────────── */
+
+.hub-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hub-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.hub-item:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.hub-item-icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+}
+
+.hub-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.hub-item-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0 0 3px;
+}
+
+.hub-item-title a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.hub-item-title a:hover {
+  color: #ffb000;
+}
+
+.hub-item-meta {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.hub-item-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ─── File Type Badge ────────────────────────────────────── */
+
+.hub-file-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+}
+
+/* ─── Status Pills ───────────────────────────────────────── */
+
+.hub-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.hub-status--proposed {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+}
+
+.hub-status--approved {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+}
+
+.hub-status--rejected {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+}
+
+.hub-status--active {
+  background: rgba(255, 176, 0, 0.15);
+  color: #ffb000;
+}
+
+.hub-status--completed {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+}
+
+.hub-status--pending {
+  background: rgba(241, 196, 15, 0.15);
+  color: #f1c40f;
+}
+
+.hub-status--paused {
+  background: rgba(149, 165, 166, 0.15);
+  color: #95a5a6;
+}
+
+.hub-status--planning {
+  background: rgba(155, 89, 182, 0.15);
+  color: #9b59b6;
+}
+
+/* ─── Founders Room (Discussion) ─────────────────────────── */
+
+.hub-post {
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+
+.hub-post-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.hub-post-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffb000, #ff6b00);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #1a1a2e;
+  font-family: 'Nunito', sans-serif;
+  flex-shrink: 0;
+}
+
+.hub-post-author {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.hub-post-time {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.3);
+  margin-left: auto;
+}
+
+.hub-post-body {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.hub-post-input-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.hub-post-input-row .hub-form-textarea {
+  min-height: 60px;
+  flex: 1;
+}
+
+.hub-post-input-row .hub-btn-new {
+  align-self: flex-end;
+}
+
+/* ─── Team Grid ──────────────────────────────────────────── */
+
+.hub-team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.hub-team-card {
+  text-align: center;
+  padding: 24px 16px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  transition: all 0.25s ease;
+}
+
+.hub-team-card:hover {
+  border-color: rgba(255, 176, 0, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.hub-team-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  background: linear-gradient(135deg, #ffb000, #ff6b00);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #1a1a2e;
+  font-family: 'Nunito', sans-serif;
+  overflow: hidden;
+}
+
+.hub-team-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hub-team-name {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 4px;
+}
+
+.hub-team-role {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  color: #ffb000;
+  font-weight: 700;
+}
+
+.hub-team-email {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 6px;
+  display: block;
+}
+
+/* ─── Empty State ────────────────────────────────────────── */
+
+.hub-empty {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.hub-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+  display: block;
+  opacity: 0.4;
+}
+
+.hub-empty-text {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 600;
+}
+
+/* ─── Loading ────────────────────────────────────────────── */
+
+.hub-loading {
+  text-align: center;
+  padding: 48px;
+}
+
+.hub-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 176, 0, 0.15);
+  border-top-color: #ffb000;
+  border-radius: 50%;
+  animation: hubSpin 0.8s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes hubSpin {
+  to { transform: rotate(360deg); }
+}
+
+.hub-loading-text {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ─── Toast ──────────────────────────────────────────────── */
+
+.hub-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 24px;
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 12px;
+  color: #2ecc71;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  z-index: 1000;
+  animation: hubToastIn 0.3s ease, hubToastOut 0.3s ease 2.7s forwards;
+}
+
+.hub-toast--error {
+  background: rgba(231, 76, 60, 0.15);
+  border-color: rgba(231, 76, 60, 0.3);
+  color: #e74c3c;
+}
+
+@keyframes hubToastIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hubToastOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .hub {
+    padding: 80px 14px 40px;
+  }
+
+  .hub-title {
+    font-size: 1.5rem;
+  }
+
+  .hub-tabs {
+    margin-bottom: 20px;
+  }
+
+  .hub-tab {
+    padding: 8px 14px;
+    font-size: 0.76rem;
+  }
+
+  .hub-panel {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .hub-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .hub-form-row-inline {
+    grid-template-columns: 1fr;
+  }
+
+  .hub-team-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .hub-item {
+    flex-wrap: wrap;
+  }
+
+  .hub-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+
+  .hub-post-input-row {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .hub-team-grid {
+    grid-template-columns: 1fr;
+  }
+}

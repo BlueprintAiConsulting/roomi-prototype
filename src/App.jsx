@@ -7,6 +7,7 @@ import ChatInterface from './components/ChatInterface.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import AnchorView from './components/AnchorView.jsx';
 import Universe from './components/Universe.jsx';
+import FounderHub from './components/FounderHub.jsx';
 import Login from './components/Login.jsx';
 import RawChatTest from './components/RawChatTest.jsx';
 import './App.css';
@@ -130,6 +131,8 @@ function AppContent() {
         return <AnchorView userId={user?.uid} />;
       case 'universe':
         return <Universe />;
+      case 'hub':
+        return <FounderHub userId={user?.uid} userName={user?.displayName || userData?.preferredName} />;
       case 'landing':
       default:
         return (
@@ -164,7 +167,7 @@ function AppContent() {
         id="main-content"
         ref={mainRef}
         role="main"
-        aria-label={`ROOMI ${displayedView === 'chat' ? 'Chat' : displayedView === 'anchor' ? 'Anchor View' : displayedView === 'universe' ? 'Universe' : 'Home'}`}
+        aria-label={`ROOMI ${displayedView === 'chat' ? 'Chat' : displayedView === 'anchor' ? 'Anchor View' : displayedView === 'universe' ? 'Universe' : displayedView === 'hub' ? 'Founder Hub' : 'Home'}`}
         className={`main-content ${transitioning ? 'main-content--exit' : 'main-content--enter'}`}
       >
         {renderView()}

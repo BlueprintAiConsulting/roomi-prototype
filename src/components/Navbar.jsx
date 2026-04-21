@@ -15,6 +15,7 @@ export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onRe
         { id: 'universe', label: 'Universe' },
         { id: 'chat', label: 'Try ROOMI' },
         { id: 'anchor', label: 'Anchor View' },
+        { id: 'hub', label: '🔒 Hub' },
       ];
 
   return (
