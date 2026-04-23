@@ -16,6 +16,7 @@ import {
   deleteDoc,
   serverTimestamp,
   limit,
+  onSnapshot,
   storageRef,
   uploadBytes,
   getDownloadURL,
@@ -510,4 +511,50 @@ export function formatFileSize(bytes) {
     i++;
   }
   return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+// ─── Real-time Listeners (onSnapshot) ───────────────────────
+// Each subscriber returns an unsubscribe() function.
+// Call it when the component unmounts or the tab changes.
+
+function makeSubscriber(collectionName, orderField, callback, limitCount = null) {
+  if (!db) return () => {};
+  try {
+    let q = query(collection(db, collectionName), orderBy(orderField, 'desc'));
+    if (limitCount) q = query(collection(db, collectionName), orderBy(orderField, 'desc'), limit(limitCount));
+    return onSnapshot(q,
+      snap => callback(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      err => console.error(`[hub] onSnapshot error (${collectionName}):`, err)
+    );
+  } catch (err) {
+    console.error(`[hub] Failed to create listener (${collectionName}):`, err);
+    return () => {};
+  }
+}
+
+export const subscribeDocuments   = (cb) => makeSubscriber('hub_documents',      'uploadedAt',  cb);
+export const subscribeDecisions   = (cb) => makeSubscriber('hub_decisions',      'createdAt',   cb);
+export const subscribeMeetings    = (cb) => makeSubscriber('hub_meetings',       'date',        cb);
+export const subscribeFunding     = (cb) => makeSubscriber('hub_funding',        'createdAt',   cb);
+export const subscribePilots      = (cb) => makeSubscriber('hub_pilots',         'createdAt',   cb);
+export const subscribeProduct     = (cb) => makeSubscriber('hub_product',        'createdAt',   cb);
+export const subscribeTeam        = (cb) => makeSubscriber('hub_team',           'order',       cb);
+export const subscribeActionItems = (cb) => makeSubscriber('hub_action_items',   'createdAt',   cb);
+export const subscribeRoom        = (cb) => makeSubscriber('hub_founders_room',  'createdAt',   cb, 50);
+
+/** Subscribe to ALL collections at once (used by Overview tab).
+ *  Returns a single cleanup function that tears down all listeners. */
+export function subscribeAll({ onDocuments, onDecisions, onMeetings, onFunding, onPilots, onProduct, onTeam, onRoom, onActionItems }) {
+  const unsubs = [
+    subscribeDocuments(onDocuments),
+    subscribeDecisions(onDecisions),
+    subscribeMeetings(onMeetings),
+    subscribeFunding(onFunding),
+    subscribePilots(onPilots),
+    subscribeProduct(onProduct),
+    subscribeTeam(onTeam),
+    subscribeRoom(onRoom),
+    subscribeActionItems(onActionItems),
+  ];
+  return () => unsubs.forEach(u => u());
 }

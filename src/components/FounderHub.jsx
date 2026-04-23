@@ -3,17 +3,20 @@
 
 import { useState, useEffect, useCallback, useRef, Component } from 'react';
 import {
-  uploadHubDocument, getHubDocuments, deleteHubDocument,
-  saveDecision, getDecisions, deleteDecision,
-  saveMeeting, getMeetings, deleteMeeting,
-  saveFundingEntry, getFundingEntries, deleteFundingEntry,
-  savePilot, getPilots, deletePilot,
-  saveProductUpdate, getProductUpdates, deleteProductUpdate,
-  getTeamMembers, saveTeamMember,
-  postToFoundersRoom, getFoundersRoomPosts, deleteFoundersRoomPost,
-  saveActionItem, getActionItems, deleteActionItem,
+  uploadHubDocument, deleteHubDocument,
+  saveDecision, deleteDecision,
+  saveMeeting, deleteMeeting,
+  saveFundingEntry, deleteFundingEntry,
+  savePilot, deletePilot,
+  saveProductUpdate, deleteProductUpdate,
+  saveTeamMember,
+  postToFoundersRoom, deleteFoundersRoomPost,
+  saveActionItem, deleteActionItem,
   togglePin,
   getFileTypeInfo, formatFileSize,
+  subscribeDocuments, subscribeDecisions, subscribeMeetings, subscribeFunding,
+  subscribePilots, subscribeProduct, subscribeTeam, subscribeRoom,
+  subscribeActionItems, subscribeAll,
 } from '../hooks/useHub.js';
 import './FounderHub.css';
 
@@ -148,49 +151,51 @@ export default function FounderHub({ userId, userName }) {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Load data for active tab
+  // Real-time subscriptions — torn down on tab change / unmount
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      try {
-        if (activeTab === 'overview') {
-          // Load everything in parallel for the dashboard
-          const [docs, decs, meets, fund, pils, prod, teamData, room, actions] = await Promise.all([
-            getHubDocuments(), getDecisions(), getMeetings(), getFundingEntries(),
-            getPilots(), getProductUpdates(), getTeamMembers(), getFoundersRoomPosts(), getActionItems(),
-          ]);
-          if (!cancelled) {
-            setDocuments(docs);
-            setDecisions(decs);
-            setMeetings(meets);
-            setFunding(fund);
-            setPilots(pils);
-            setProduct(prod);
-            setTeam(teamData.length > 0 ? teamData : DEFAULT_TEAM);
-            setRoomPosts(room);
-            setActionItems(actions);
-          }
-        } else {
-          switch (activeTab) {
-            case 'documents': { const data = await getHubDocuments(); if (!cancelled) setDocuments(data); break; }
-            case 'decisions': { const data = await getDecisions();    if (!cancelled) setDecisions(data); break; }
-            case 'meetings':  { const data = await getMeetings();     if (!cancelled) setMeetings(data);  break; }
-            case 'funding':   { const data = await getFundingEntries(); if (!cancelled) setFunding(data); break; }
-            case 'pilots':    { const data = await getPilots();        if (!cancelled) setPilots(data);   break; }
-            case 'product':   { const data = await getProductUpdates(); if (!cancelled) setProduct(data); break; }
-            case 'team':      { const data = await getTeamMembers();   if (!cancelled) setTeam(data.length > 0 ? data : DEFAULT_TEAM); break; }
-            case 'room':      { const data = await getFoundersRoomPosts(); if (!cancelled) setRoomPosts(data); break; }
-            case 'actions':   { const data = await getActionItems();   if (!cancelled) setActionItems(data); break; }
-          }
-        }
-      } catch (err) {
-        console.error('[hub] Load error:', err);
+    setLoading(true);
+
+    const setTeamSafe = (data) =>
+      setTeam(data.length > 0 ? data : DEFAULT_TEAM);
+
+    let unsub;
+
+    if (activeTab === 'overview') {
+      // Open all listeners in parallel for the dashboard
+      unsub = subscribeAll({
+        onDocuments:   setDocuments,
+        onDecisions:   setDecisions,
+        onMeetings:    setMeetings,
+        onFunding:     setFunding,
+        onPilots:      setPilots,
+        onProduct:     setProduct,
+        onTeam:        setTeamSafe,
+        onRoom:        setRoomPosts,
+        onActionItems: setActionItems,
+      });
+    } else {
+      switch (activeTab) {
+        case 'documents': unsub = subscribeDocuments(setDocuments);    break;
+        case 'decisions': unsub = subscribeDecisions(setDecisions);    break;
+        case 'meetings':  unsub = subscribeMeetings(setMeetings);      break;
+        case 'funding':   unsub = subscribeFunding(setFunding);        break;
+        case 'pilots':    unsub = subscribePilots(setPilots);          break;
+        case 'product':   unsub = subscribeProduct(setProduct);        break;
+        case 'team':      unsub = subscribeTeam(setTeamSafe);          break;
+        case 'room':      unsub = subscribeRoom(setRoomPosts);         break;
+        case 'actions':   unsub = subscribeActionItems(setActionItems); break;
+        default:          unsub = () => {};
       }
-      if (!cancelled) setLoading(false);
     }
-    load();
-    return () => { cancelled = true; };
+
+    // First snapshot fires fast — clear loading immediately after 400ms max
+    const loadTimer = setTimeout(() => setLoading(false), 400);
+
+    return () => {
+      clearTimeout(loadTimer);
+      setLoading(false);
+      if (typeof unsub === 'function') unsub();
+    };
   }, [activeTab]);
 
   // Counts for tab badges
