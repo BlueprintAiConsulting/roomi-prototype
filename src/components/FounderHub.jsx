@@ -317,41 +317,54 @@ export default function FounderHub({ userId, userName }) {
   );
 }
 
-// ─── Founders Room Tab ──────────────────────────────────────
-
 function FoundersRoomTab({ posts, setPosts, userId, userName, showToast }) {
-  const [newPost, setNewPost] = useState('');
-  const [posting, setPosting] = useState(false);
+  const [newMsg, setNewMsg] = useState('');
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef(null);
+  const inputRef = useRef(null);
 
-  const handlePost = async () => {
-    if (!newPost.trim()) return;
-    setPosting(true);
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [posts.length]);
+
+  // Focus input on mount
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const handleSend = async () => {
+    if (!newMsg.trim()) return;
+    setSending(true);
     try {
       const id = await postToFoundersRoom({
-        text: newPost.trim(),
+        text: newMsg.trim(),
         authorId: userId,
         authorName: userName || 'Founder',
       });
-      setPosts(prev => [{
-        id,
-        text: newPost.trim(),
-        authorId: userId,
+      setPosts(prev => [{ 
+        id, text: newMsg.trim(), authorId: userId,
         authorName: userName || 'Founder',
         createdAt: { seconds: Date.now() / 1000 },
       }, ...prev]);
-      setNewPost('');
-      showToast('Posted to Founders Room');
+      setNewMsg('');
     } catch {
-      showToast('Failed to post', true);
+      showToast('Failed to send', true);
     }
-    setPosting(false);
+    setSending(false);
+    inputRef.current?.focus();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   };
 
   const handleDelete = async (postId) => {
-    if (!confirm('Delete this post?')) return;
     await deleteFoundersRoomPost(postId);
     setPosts(prev => prev.filter(p => p.id !== postId));
-    showToast('Post deleted');
   };
 
   const handleReact = async (postId, emoji) => {
@@ -365,21 +378,10 @@ function FoundersRoomTab({ posts, setPosts, userId, userName, showToast }) {
         const already = users.includes(userId);
         return {
           ...p,
-          reactions: {
-            ...reactions,
-            [emoji]: already ? users.filter(u => u !== userId) : [...users, userId],
-          },
+          reactions: { ...reactions, [emoji]: already ? users.filter(u => u !== userId) : [...users, userId] },
         };
       }));
-    } catch {
-      showToast('Failed to react', true);
-    }
-  };
-
-  const formatTime = (ts) => {
-    if (!ts) return '';
-    const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    } catch { /* silent */ }
   };
 
   const getInitials = (name) => {
@@ -389,64 +391,126 @@ function FoundersRoomTab({ posts, setPosts, userId, userName, showToast }) {
 
   const REACTIONS = ['👍', '❤️', '🔥', '💡'];
 
+  // Reverse posts so oldest are first (chat order)
+  const chatMessages = [...posts].reverse();
+
+  // Group messages: insert date headers + collapse consecutive same-author
+  const formatDate = (ts) => {
+    if (!ts) return '';
+    const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === today.toDateString()) return 'Today';
+    if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  };
+
+  const formatTime = (ts) => {
+    if (!ts) return '';
+    const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  let lastDate = '';
+  let lastAuthor = '';
+
   return (
-    <>
-      <div className="hub-panel-header">
-        <h2 className="hub-panel-title">💬 Founders Room</h2>
+    <div className="chat-channel">
+      {/* Channel header */}
+      <div className="chat-channel-header">
+        <span className="chat-channel-hash">#</span>
+        <span className="chat-channel-name">founders</span>
+        <span className="chat-channel-topic">ROOMI Founding Council — real-time chat</span>
+        <span className="chat-channel-count">{posts.length} messages</span>
       </div>
 
-      <div className="hub-post-input-row">
-        <div className="hub-post-input-wrap">
-          <textarea
-            className="hub-form-textarea"
-            placeholder="Share an update, idea, or question with the council…"
-            value={newPost}
-            onChange={e => setNewPost(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) handlePost(); }}
-          />
-          <span className="hub-post-hint">⌘ + Enter to post</span>
-        </div>
-        <button className="hub-btn-new" onClick={handlePost} disabled={posting || !newPost.trim()}>
-          {posting ? '…' : '📤 Post'}
+      {/* Message stream */}
+      <div className="chat-messages" ref={scrollRef}>
+        {chatMessages.length === 0 ? (
+          <div className="chat-empty">
+            <div className="chat-empty-icon">💬</div>
+            <div className="chat-empty-title">Welcome to #founders</div>
+            <div className="chat-empty-text">This is the start of the conversation. Say something to the council.</div>
+          </div>
+        ) : (
+          chatMessages.map((msg, i) => {
+            const dateStr = formatDate(msg.createdAt);
+            const showDate = dateStr !== lastDate;
+            if (showDate) lastDate = dateStr;
+
+            const isConsecutive = msg.authorId === lastAuthor && !showDate;
+            lastAuthor = msg.authorId;
+
+            const hasReactions = msg.reactions && Object.values(msg.reactions).some(arr => arr?.length > 0);
+
+            return (
+              <div key={msg.id}>
+                {showDate && (
+                  <div className="chat-date-sep">
+                    <span className="chat-date-sep-text">{dateStr}</span>
+                  </div>
+                )}
+                <div className={`chat-msg ${isConsecutive ? 'chat-msg--consecutive' : ''} ${msg.authorId === userId ? 'chat-msg--mine' : ''}`}>
+                  {!isConsecutive && (
+                    <div className="chat-msg-avatar">{getInitials(msg.authorName)}</div>
+                  )}
+                  <div className={`chat-msg-body ${isConsecutive ? 'chat-msg-body--consecutive' : ''}`}>
+                    {!isConsecutive && (
+                      <div className="chat-msg-header">
+                        <span className="chat-msg-author">{msg.authorName}</span>
+                        <span className="chat-msg-time">{formatTime(msg.createdAt)}</span>
+                      </div>
+                    )}
+                    <div className="chat-msg-text">{renderMentions(msg.text)}</div>
+                    {/* Reactions */}
+                    {hasReactions && (
+                      <div className="chat-msg-reactions">
+                        {REACTIONS.map(emoji => {
+                          const count = (msg.reactions?.[emoji] || []).length;
+                          if (count === 0) return null;
+                          const reacted = (msg.reactions?.[emoji] || []).includes(userId);
+                          return (
+                            <button key={emoji} className={`hub-reaction-btn ${reacted ? 'hub-reaction-btn--active' : ''}`} onClick={() => handleReact(msg.id, emoji)}>
+                              {emoji}<span className="hub-reaction-count">{count}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  {/* Hover toolbar */}
+                  <div className="chat-msg-toolbar">
+                    {REACTIONS.map(emoji => (
+                      <button key={emoji} className="chat-toolbar-btn" onClick={() => handleReact(msg.id, emoji)} title={emoji}>{emoji}</button>
+                    ))}
+                    {msg.authorId === userId && (
+                      <button className="chat-toolbar-btn chat-toolbar-btn--delete" onClick={() => handleDelete(msg.id)} title="Delete">🗑</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Input bar — Slack-style */}
+      <div className="chat-input-bar">
+        <textarea
+          ref={inputRef}
+          className="chat-input"
+          placeholder="Message #founders"
+          value={newMsg}
+          onChange={e => setNewMsg(e.target.value)}
+          onKeyDown={handleKeyDown}
+          rows={1}
+        />
+        <button className="chat-send-btn" onClick={handleSend} disabled={sending || !newMsg.trim()}>
+          {sending ? '…' : '↑'}
         </button>
       </div>
-
-      {posts.length === 0 ? (
-        <div className="hub-empty">
-          <span className="hub-empty-icon">💬</span>
-          <p className="hub-empty-text">No posts yet. Start the conversation!</p>
-        </div>
-      ) : (
-        posts.map(post => (
-          <div key={post.id} className="hub-post">
-            <div className="hub-post-header">
-              <div className="hub-post-avatar">{getInitials(post.authorName)}</div>
-              <span className="hub-post-author">{post.authorName}</span>
-              <span className="hub-post-time">{formatTime(post.createdAt)}</span>
-              {post.authorId === userId && (
-                <button className="hub-btn-delete" onClick={() => handleDelete(post.id)}>✕</button>
-              )}
-            </div>
-            <div className="hub-post-body">{renderMentions(post.text)}</div>
-            <div className="hub-post-reactions">
-              {REACTIONS.map(emoji => {
-                const count = (post.reactions?.[emoji] || []).length;
-                const reacted = (post.reactions?.[emoji] || []).includes(userId);
-                return (
-                  <button
-                    key={emoji}
-                    className={`hub-reaction-btn ${reacted ? 'hub-reaction-btn--active' : ''}`}
-                    onClick={() => handleReact(post.id, emoji)}
-                  >
-                    {emoji}{count > 0 && <span className="hub-reaction-count">{count}</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))
-      )}
-    </>
+    </div>
   );
 }
 
