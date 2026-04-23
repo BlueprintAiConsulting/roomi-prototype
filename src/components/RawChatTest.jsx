@@ -61,7 +61,7 @@ export default function RawChatTest({ onExit }) {
       let response;
       try {
         response = await genai.models.generateContent({
-          model: 'gemini-2.0-flash',
+          model: 'gemini-2.5-flash',
           contents: history,
           config: {
             systemInstruction: SYSTEM_PROMPT,
