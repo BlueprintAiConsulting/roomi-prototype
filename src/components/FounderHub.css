@@ -1441,3 +1441,344 @@
   flex-shrink: 0;
 }
 
+/* ─── Sticky Tab Bar wrapper ─────────────────────────────────── */
+
+.hub-tabs-outer {
+  position: sticky;
+  top: 64px;
+  z-index: 50;
+  background: rgba(13, 10, 28, 0.88);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  margin-bottom: 28px;
+  border-radius: 16px;
+}
+
+/* ─── Next Up Banner ────────────────────────────────────────── */
+
+.hub-next-up {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, rgba(255,176,0,0.08), rgba(255,107,0,0.06));
+  border: 1px solid rgba(255,176,0,0.2);
+  border-radius: 14px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-wrap: wrap;
+}
+.hub-next-up:hover {
+  border-color: rgba(255,176,0,0.4);
+  background: linear-gradient(135deg, rgba(255,176,0,0.12), rgba(255,107,0,0.09));
+  transform: translateX(2px);
+}
+.hub-next-up-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #ffb000;
+  background: rgba(255,176,0,0.15);
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.hub-next-up-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+  flex: 1;
+}
+.hub-next-up-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.45);
+}
+.hub-next-up-due { color: #ff9500; font-weight: 700; }
+
+/* ─── GFM Overview Strip ────────────────────────────────────── */
+
+.hub-gfm-overview {
+  padding: 14px 20px;
+  background: rgba(52,199,89,0.05);
+  border: 1px solid rgba(52,199,89,0.18);
+  border-radius: 14px;
+  margin-bottom: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.hub-gfm-overview:hover {
+  border-color: rgba(52,199,89,0.35);
+  background: rgba(52,199,89,0.09);
+}
+.hub-gfm-overview-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.hub-gfm-overview-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #34c759;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.hub-gfm-overview-link {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  color: rgba(52,199,89,0.65);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.hub-gfm-overview-link:hover { color: #34c759; }
+.hub-gfm-overview-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.hub-gfm-overview-raised {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.85);
+}
+.hub-gfm-overview-pct {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.38);
+}
+.hub-gfm-overview-track {
+  height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.hub-gfm-overview-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #34c759, #30d158);
+  border-radius: 6px;
+  transition: width 1s ease;
+}
+
+/* ─── Critical task pulse ───────────────────────────────────── */
+
+.hub-overview-task--critical {
+  border-color: rgba(255,59,48,0.25) !important;
+  animation: criticalPulse 2.5s ease-in-out infinite;
+}
+@keyframes criticalPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,48,0); }
+  50% { box-shadow: 0 0 0 4px rgba(255,59,48,0.12); }
+}
+
+/* ─── Emoji Reactions ───────────────────────────────────────── */
+
+.hub-post-reactions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.hub-reaction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.5);
+  transition: all 0.18s ease;
+  font-family: 'Nunito', sans-serif;
+}
+.hub-reaction-btn:hover {
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.18);
+  transform: scale(1.06);
+}
+.hub-reaction-btn--active {
+  background: rgba(255,176,0,0.12);
+  border-color: rgba(255,176,0,0.3);
+  color: #ffb000;
+}
+.hub-reaction-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+/* ─── Post input hint ───────────────────────────────────────── */
+
+.hub-post-input-wrap {
+  flex: 1;
+  position: relative;
+}
+.hub-post-input-wrap .hub-form-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 60px;
+}
+.hub-post-hint {
+  display: block;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.22);
+  margin-top: 4px;
+  padding-left: 2px;
+}
+
+/* ─── GitHub Commits Feed ───────────────────────────────────── */
+
+.hub-commits-section {
+  margin-top: 32px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding-top: 24px;
+}
+.hub-commits-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.hub-commits-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.65);
+  margin: 0;
+}
+.hub-commits-link {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.75rem;
+  color: rgba(255,176,0,0.65);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.hub-commits-link:hover { color: #ffb000; }
+.hub-commits-loading {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.28);
+  padding: 16px 0;
+  text-align: center;
+}
+.hub-commits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hub-commit-row {
+  display: grid;
+  grid-template-columns: 58px 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 10px;
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+.hub-commit-row:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.1);
+}
+.hub-commit-sha {
+  font-family: 'Courier New', monospace;
+  font-size: 0.72rem;
+  color: #ffb000;
+  background: rgba(255,176,0,0.1);
+  padding: 2px 6px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+.hub-commit-msg {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hub-commit-author {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.32);
+  white-space: nowrap;
+}
+.hub-commit-date {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.22);
+  white-space: nowrap;
+}
+
+/* ─── GFM Add Donor Form ────────────────────────────────────── */
+
+.gfm-donors-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.gfm-add-btn {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #34c759;
+  background: rgba(52,199,89,0.1);
+  border: 1px solid rgba(52,199,89,0.2);
+  border-radius: 8px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.gfm-add-btn:hover {
+  background: rgba(52,199,89,0.18);
+  border-color: rgba(52,199,89,0.4);
+}
+.gfm-add-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  animation: hubFadeIn 0.2s ease;
+}
+.gfm-add-form .hub-form-input {
+  flex: 1;
+  min-width: 110px;
+}
+
+/* ─── Mobile refinements ────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .hub-commit-row {
+    grid-template-columns: 48px 1fr auto;
+  }
+  .hub-commit-author { display: none; }
+
+  .hub-next-up {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .hub-tab-label {
+    display: none;
+  }
+  .hub-tab--active .hub-tab-label {
+    display: inline;
+  }
+}
