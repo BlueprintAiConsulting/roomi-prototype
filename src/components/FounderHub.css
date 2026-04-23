@@ -966,3 +966,268 @@
   50%      { box-shadow: 0 0 8px 2px rgba(255,59,48,0.15); }
 }
 
+/* ─── Overview / Dashboard ────────────────────────────────── */
+
+.hub-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 24px;
+}
+
+.hub-overview-greeting {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+/* Stat Grid */
+.hub-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.hub-stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background 0.18s, transform 0.18s, box-shadow 0.18s;
+  position: relative;
+  overflow: hidden;
+}
+.hub-stat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--accent) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.hub-stat-card:hover::before { opacity: 0.07; }
+.hub-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3), 0 0 0 1px var(--accent, rgba(255,255,255,0.1));
+  background: rgba(255,255,255,0.07);
+}
+.hub-stat-icon { font-size: 22px; }
+.hub-stat-count {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--accent, #fff);
+  line-height: 1;
+}
+.hub-stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Two-column layout */
+.hub-overview-cols {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .hub-overview-cols { grid-template-columns: 1fr; }
+}
+
+.hub-overview-right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Overview sections */
+.hub-overview-section {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.hub-overview-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.hub-overview-section-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.88);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hub-overview-meta {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.4);
+}
+
+.hub-overview-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0a84ff;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.hub-overview-link:hover { background: rgba(10,132,255,0.12); }
+
+.hub-overview-empty {
+  font-size: 13px;
+  color: rgba(255,255,255,0.3);
+  margin: 0;
+  text-align: center;
+  padding: 12px 0;
+}
+
+/* Overview list */
+.hub-overview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hub-overview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.hub-overview-row-title {
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* Task rows */
+.hub-overview-task {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: background 0.15s;
+}
+.hub-overview-task:hover { background: rgba(255,255,255,0.05); }
+
+.hub-overview-task-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.hub-overview-task-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hub-overview-task-meta {
+  font-size: 11px;
+  color: rgba(255,255,255,0.4);
+}
+.hub-overview-task-meta.due { color: #ff9f0a; }
+
+.hub-overview-task-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+/* Status cycle button */
+.hub-status-cycle {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1.5px solid;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.12s;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.hub-status-cycle:hover { opacity: 0.8; transform: scale(1.04); }
+
+.hub-status-cycle--todo {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.6);
+}
+.hub-status-cycle--inprogress {
+  background: rgba(255,149,0,0.12);
+  border-color: #ff9500;
+  color: #ff9500;
+}
+.hub-status-cycle--blocked {
+  background: rgba(255,59,48,0.12);
+  border-color: #ff3b30;
+  color: #ff3b30;
+}
+.hub-status-cycle--done {
+  background: rgba(52,199,89,0.12);
+  border-color: #34c759;
+  color: #34c759;
+}
+
+/* Hub status badges (used in overview rows) */
+.hub-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.hub-status--approved, .hub-status--done, .hub-status--deployed, .hub-status--live {
+  background: rgba(52,199,89,0.15);
+  color: #34c759;
+}
+.hub-status--inprogress, .hub-status--inreview, .hub-status--active {
+  background: rgba(255,149,0,0.15);
+  color: #ff9500;
+}
+.hub-status--pending, .hub-status--scheduled, .hub-status--proposed {
+  background: rgba(10,132,255,0.15);
+  color: #0a84ff;
+}
+.hub-status--blocked, .hub-status--rejected {
+  background: rgba(255,59,48,0.15);
+  color: #ff3b30;
+}
+

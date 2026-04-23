@@ -66,8 +66,9 @@ function HubSkeleton() {
 }
 
 const TABS = [
-  { id: 'room',      icon: '💬', label: 'Founders Room' },
-  { id: 'actions',   icon: '✅', label: 'Action Items' },
+  { id: 'overview',   icon: '🏠', label: 'Overview' },
+  { id: 'room',       icon: '💬', label: 'Founders Room' },
+  { id: 'actions',    icon: '✅', label: 'Action Items' },
   { id: 'documents',  icon: '📄', label: 'Documents' },
   { id: 'decisions',  icon: '📋', label: 'Decisions' },
   { id: 'meetings',   icon: '📅', label: 'Meetings' },
@@ -112,7 +113,7 @@ const DEFAULT_TEAM = [
 ];
 
 export default function FounderHub({ userId, userName }) {
-  const [activeTab, setActiveTab] = useState('room');
+  const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -142,51 +143,34 @@ export default function FounderHub({ userId, userName }) {
     async function load() {
       setLoading(true);
       try {
-        switch (activeTab) {
-          case 'documents': {
-            const data = await getHubDocuments();
-            if (!cancelled) setDocuments(data);
-            break;
+        if (activeTab === 'overview') {
+          // Load everything in parallel for the dashboard
+          const [docs, decs, meets, fund, pils, prod, teamData, room, actions] = await Promise.all([
+            getHubDocuments(), getDecisions(), getMeetings(), getFundingEntries(),
+            getPilots(), getProductUpdates(), getTeamMembers(), getFoundersRoomPosts(), getActionItems(),
+          ]);
+          if (!cancelled) {
+            setDocuments(docs);
+            setDecisions(decs);
+            setMeetings(meets);
+            setFunding(fund);
+            setPilots(pils);
+            setProduct(prod);
+            setTeam(teamData.length > 0 ? teamData : DEFAULT_TEAM);
+            setRoomPosts(room);
+            setActionItems(actions);
           }
-          case 'decisions': {
-            const data = await getDecisions();
-            if (!cancelled) setDecisions(data);
-            break;
-          }
-          case 'meetings': {
-            const data = await getMeetings();
-            if (!cancelled) setMeetings(data);
-            break;
-          }
-          case 'funding': {
-            const data = await getFundingEntries();
-            if (!cancelled) setFunding(data);
-            break;
-          }
-          case 'pilots': {
-            const data = await getPilots();
-            if (!cancelled) setPilots(data);
-            break;
-          }
-          case 'product': {
-            const data = await getProductUpdates();
-            if (!cancelled) setProduct(data);
-            break;
-          }
-          case 'team': {
-            const data = await getTeamMembers();
-            if (!cancelled) setTeam(data.length > 0 ? data : DEFAULT_TEAM);
-            break;
-          }
-          case 'room': {
-            const data = await getFoundersRoomPosts();
-            if (!cancelled) setRoomPosts(data);
-            break;
-          }
-          case 'actions': {
-            const data = await getActionItems();
-            if (!cancelled) setActionItems(data);
-            break;
+        } else {
+          switch (activeTab) {
+            case 'documents': { const data = await getHubDocuments(); if (!cancelled) setDocuments(data); break; }
+            case 'decisions': { const data = await getDecisions();    if (!cancelled) setDecisions(data); break; }
+            case 'meetings':  { const data = await getMeetings();     if (!cancelled) setMeetings(data);  break; }
+            case 'funding':   { const data = await getFundingEntries(); if (!cancelled) setFunding(data); break; }
+            case 'pilots':    { const data = await getPilots();        if (!cancelled) setPilots(data);   break; }
+            case 'product':   { const data = await getProductUpdates(); if (!cancelled) setProduct(data); break; }
+            case 'team':      { const data = await getTeamMembers();   if (!cancelled) setTeam(data.length > 0 ? data : DEFAULT_TEAM); break; }
+            case 'room':      { const data = await getFoundersRoomPosts(); if (!cancelled) setRoomPosts(data); break; }
+            case 'actions':   { const data = await getActionItems();   if (!cancelled) setActionItems(data); break; }
           }
         }
       } catch (err) {
@@ -218,6 +202,8 @@ export default function FounderHub({ userId, userName }) {
     if (loading) return <HubSkeleton />;
 
     switch (activeTab) {
+      case 'overview':
+        return <OverviewTab counts={counts} actionItems={actionItems} decisions={decisions} meetings={meetings} product={product} setActionItems={setActionItems} setActiveTab={setActiveTab} showToast={showToast} />;
       case 'room':
         return <FoundersRoomTab posts={filterBySearch(roomPosts, searchQuery)} setPosts={setRoomPosts} userId={userId} userName={userName} showToast={showToast} />;
       case 'actions':
@@ -697,6 +683,185 @@ function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, sta
         </div>
       )}
     </>
+  );
+}
+
+// ─── Overview / Dashboard Tab ───────────────────────────────
+
+const STATUS_CYCLE = ['Todo', 'In Progress', 'Blocked', 'Done'];
+
+function OverviewTab({ counts, actionItems, decisions, meetings, product, setActionItems, setActiveTab, showToast }) {
+  const formatTime = (ts) => {
+    if (!ts) return '';
+    const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const openActions = actionItems.filter(a => a.status !== 'Done');
+  const doneActions = actionItems.filter(a => a.status === 'Done').length;
+  const pinnedAll = [...actionItems].filter(a => a.pinned);
+  const recentDecisions = decisions.slice(0, 3);
+  const recentProduct = product.slice(0, 2);
+  const lastMeeting = meetings[0];
+
+  const cycleStatus = async (item) => {
+    const idx = STATUS_CYCLE.indexOf(item.status || 'Todo');
+    const next = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+    try {
+      await saveActionItem({ status: next }, item.id);
+      setActionItems(prev => prev.map(a => a.id === item.id ? { ...a, status: next } : a));
+      showToast(`→ ${next}`);
+    } catch {
+      showToast('Failed to update', true);
+    }
+  };
+
+  const STAT_CARDS = [
+    { label: 'Action Items', count: counts.actions, icon: '✅', tab: 'actions', accent: '#34c759' },
+    { label: 'Decisions',    count: counts.decisions, icon: '📋', tab: 'decisions', accent: '#ff9500' },
+    { label: 'Meetings',     count: counts.meetings,  icon: '📅', tab: 'meetings',  accent: '#5e5ce6' },
+    { label: 'Funding',      count: counts.funding,   icon: '💰', tab: 'funding',   accent: '#ffd60a' },
+    { label: 'Pilots',       count: counts.pilots,    icon: '🧪', tab: 'pilots',    accent: '#30d158' },
+    { label: 'Documents',    count: counts.documents, icon: '📄', tab: 'documents', accent: '#63d2ff' },
+  ];
+
+  return (
+    <div className="hub-overview">
+      <div className="hub-panel-header">
+        <h2 className="hub-panel-title">🏠 Founder Dashboard</h2>
+        <span className="hub-overview-greeting">Council workspace at a glance</span>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="hub-stat-grid">
+        {STAT_CARDS.map(card => (
+          <button
+            key={card.tab}
+            className="hub-stat-card"
+            style={{ '--accent': card.accent }}
+            onClick={() => setActiveTab(card.tab)}
+          >
+            <span className="hub-stat-icon">{card.icon}</span>
+            <span className="hub-stat-count">{card.count}</span>
+            <span className="hub-stat-label">{card.label}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="hub-overview-cols">
+        {/* Open Action Items */}
+        <div className="hub-overview-section">
+          <div className="hub-overview-section-header">
+            <h3>✅ Open Tasks <span className="hub-overview-meta">{openActions.length} open · {doneActions} done</span></h3>
+            <button className="hub-overview-link" onClick={() => setActiveTab('actions')}>View all →</button>
+          </div>
+          {openActions.length === 0 ? (
+            <p className="hub-overview-empty">All tasks complete 🎉</p>
+          ) : (
+            <div className="hub-overview-list">
+              {openActions.slice(0, 6).map(item => (
+                <div key={item.id} className="hub-overview-task">
+                  <div className="hub-overview-task-body">
+                    <span className="hub-overview-task-title">{item.title}</span>
+                    {item.assignee && <span className="hub-overview-task-meta">→ {item.assignee}</span>}
+                    {item.dueDate && <span className="hub-overview-task-meta due">Due {item.dueDate}</span>}
+                  </div>
+                  <div className="hub-overview-task-right">
+                    {item.priority && (
+                      <span className={`hub-priority hub-priority--${item.priority.toLowerCase()}`}>{item.priority}</span>
+                    )}
+                    <button
+                      className={`hub-status-cycle hub-status-cycle--${(item.status || 'todo').toLowerCase().replace(/\s/g,'')}`}
+                      onClick={() => cycleStatus(item)}
+                      title="Click to advance status"
+                    >
+                      {item.status || 'Todo'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Right column */}
+        <div className="hub-overview-right">
+          {/* Recent Decisions */}
+          <div className="hub-overview-section">
+            <div className="hub-overview-section-header">
+              <h3>📋 Recent Decisions</h3>
+              <button className="hub-overview-link" onClick={() => setActiveTab('decisions')}>View all →</button>
+            </div>
+            {recentDecisions.length === 0 ? (
+              <p className="hub-overview-empty">No decisions yet</p>
+            ) : (
+              <div className="hub-overview-list">
+                {recentDecisions.map(d => (
+                  <div key={d.id} className="hub-overview-row">
+                    <span className="hub-overview-row-title">{d.title}</span>
+                    <span className={`hub-status hub-status--${(d.status||'').toLowerCase().replace(/\s/g,'')}`}>{d.status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Latest Product Update */}
+          {recentProduct.length > 0 && (
+            <div className="hub-overview-section">
+              <div className="hub-overview-section-header">
+                <h3>🚀 Latest Product</h3>
+                <button className="hub-overview-link" onClick={() => setActiveTab('product')}>View all →</button>
+              </div>
+              <div className="hub-overview-list">
+                {recentProduct.map(p => (
+                  <div key={p.id} className="hub-overview-row">
+                    <span className="hub-overview-row-title">{p.title}</span>
+                    <span className={`hub-status hub-status--${(p.status||'').toLowerCase().replace(/\s/g,'')}`}>{p.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Last Meeting */}
+          {lastMeeting && (
+            <div className="hub-overview-section">
+              <div className="hub-overview-section-header">
+                <h3>📅 Last Meeting</h3>
+                <button className="hub-overview-link" onClick={() => setActiveTab('meetings')}>View all →</button>
+              </div>
+              <div className="hub-overview-list">
+                <div className="hub-overview-row">
+                  <div>
+                    <div className="hub-overview-row-title">{lastMeeting.title}</div>
+                    {lastMeeting.attendees && <div className="hub-overview-task-meta">{lastMeeting.attendees}</div>}
+                  </div>
+                  <span className="hub-overview-task-meta">{lastMeeting.date || formatTime(lastMeeting.createdAt)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pinned Items */}
+          {pinnedAll.length > 0 && (
+            <div className="hub-overview-section">
+              <div className="hub-overview-section-header">
+                <h3>📌 Pinned</h3>
+              </div>
+              <div className="hub-overview-list">
+                {pinnedAll.slice(0, 4).map(item => (
+                  <div key={item.id} className="hub-overview-row">
+                    <span className="hub-overview-row-title">{item.title || item.source || item.organization || 'Pinned item'}</span>
+                    <button className="hub-overview-link" onClick={() => setActiveTab('actions')}>→</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
