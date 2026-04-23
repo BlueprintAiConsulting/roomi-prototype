@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
+import { GoogleGenAI } from '@google/genai';
 
 const SYSTEM_PROMPT = `You are ROOMI, a warm and caring AI companion for people with intellectual and developmental disabilities. 
 Be conversational, warm, simple, and supportive. Use short sentences. Use emojis occasionally. Never be clinical or robotic.
 This is a live smoke test — respond naturally as ROOMI would in production.`;
 
-const SERVER = 'https://roomi-voice-server.onrender.com';
+// ─── Direct Gemini SDK (no server needed) ──
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const genai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 export default function RawChatTest({ onExit }) {
   const [messages, setMessages] = useState([
@@ -42,19 +45,28 @@ export default function RawChatTest({ onExit }) {
           parts: [{ text: m.text }]
         }));
 
-      const res = await fetch(`${SERVER}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ systemPrompt: SYSTEM_PROMPT, contents: history }),
+      if (!genai) {
+        throw new Error('Gemini API key not configured. Set VITE_GEMINI_API_KEY.');
+      }
+
+      const response = await genai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: history,
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
+          temperature: 0.45,
+          maxOutputTokens: 512,
+          topP: 0.85,
+        },
       });
 
-      const data = await res.json();
-      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      const reply = response?.text?.trim()
+        || response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
       if (reply) {
         setMessages(prev => [...prev, { role: 'roomi', text: reply }]);
       } else {
-        throw new Error(data?.error?.message || 'No response');
+        throw new Error('No response from ROOMI');
       }
     } catch (err) {
       setError(`Error: ${err.message}`);
