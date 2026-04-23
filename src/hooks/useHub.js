@@ -413,6 +413,62 @@ export async function deleteFoundersRoomPost(docId) {
   }
 }
 
+// Toggle a reaction emoji on a post (stored as { [emoji]: [uid, ...] })
+export async function toggleRoomReaction(postId, emoji, userId) {
+  if (!db) return;
+  try {
+    const ref = doc(db, 'hub_founders_room', postId);
+    const snap = await getDoc(ref);
+    const reactions = snap.data()?.reactions || {};
+    const users = reactions[emoji] || [];
+    const already = users.includes(userId);
+    await updateDoc(ref, {
+      [`reactions.${emoji}`]: already
+        ? users.filter(u => u !== userId)
+        : [...users, userId],
+    });
+  } catch (err) {
+    console.error('[hub] Error toggling reaction:', err);
+    throw err;
+  }
+}
+
+// ─── GoFundMe Donors (Firestore-backed) ─────────────────────
+
+export async function saveGFMDonor(data, docId = null) {
+  if (!db) return null;
+  try {
+    if (docId) {
+      await updateDoc(doc(db, 'hub_gfm_donors', docId), {
+        ...data,
+        updatedAt: serverTimestamp(),
+      });
+      return docId;
+    } else {
+      const ref = await addDoc(collection(db, 'hub_gfm_donors'), {
+        ...data,
+        createdAt: serverTimestamp(),
+      });
+      return ref.id;
+    }
+  } catch (err) {
+    console.error('[hub] Error saving GFM donor:', err);
+    throw err;
+  }
+}
+
+export async function deleteGFMDonor(docId) {
+  if (!db) return;
+  try {
+    await deleteDoc(doc(db, 'hub_gfm_donors', docId));
+  } catch (err) {
+    console.error('[hub] Error deleting GFM donor:', err);
+  }
+}
+
+export const subscribeGFMDonors = (cb) =>
+  makeSubscriber('hub_gfm_donors', 'createdAt', cb);
+
 // ─── Action Items (Tasks / Todo) ────────────────────────────
 
 export async function saveActionItem(data, docId = null) {

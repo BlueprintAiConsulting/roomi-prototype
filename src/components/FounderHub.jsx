@@ -12,7 +12,8 @@ import {
   saveTeamMember,
   postToFoundersRoom, deleteFoundersRoomPost,
   saveActionItem, deleteActionItem,
-  togglePin,
+  togglePin, toggleRoomReaction,
+  saveGFMDonor, deleteGFMDonor, subscribeGFMDonors,
   getFileTypeInfo, formatFileSize,
   subscribeDocuments, subscribeDecisions, subscribeMeetings, subscribeFunding,
   subscribePilots, subscribeProduct, subscribeTeam, subscribeRoom,
@@ -131,6 +132,7 @@ export default function FounderHub({ userId, userName }) {
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [gfmDonors, setGfmDonors] = useState([]);
 
   // Data stores
   const [documents, setDocuments] = useState([]);
@@ -163,7 +165,8 @@ export default function FounderHub({ userId, userName }) {
 
     if (activeTab === 'overview') {
       // Open all listeners in parallel for the dashboard
-      unsub = subscribeAll({
+      const unsubGfm = subscribeGFMDonors(setGfmDonors);
+      const unsubAll = subscribeAll({
         onDocuments:   setDocuments,
         onDecisions:   setDecisions,
         onMeetings:    setMeetings,
@@ -175,6 +178,7 @@ export default function FounderHub({ userId, userName }) {
         onActionItems: setActionItems,
         onActivity:    setActivityLog,
       });
+      unsub = () => { unsubAll(); unsubGfm(); };
     } else {
       switch (activeTab) {
         case 'documents': unsub = subscribeDocuments(setDocuments);    break;
@@ -226,7 +230,7 @@ export default function FounderHub({ userId, userName }) {
 
     switch (activeTab) {
       case 'overview':
-        return <OverviewTab counts={counts} actionItems={actionItems} decisions={decisions} meetings={meetings} product={product} activityLog={activityLog} setActionItems={setActionItems} setActiveTab={setActiveTab} showToast={showToast} />;
+        return <OverviewTab counts={counts} actionItems={actionItems} decisions={decisions} meetings={meetings} product={product} activityLog={activityLog} gfmDonors={gfmDonors} setActionItems={setActionItems} setActiveTab={setActiveTab} showToast={showToast} />;
       case 'room':
         return <FoundersRoomTab posts={filterBySearch(roomPosts, searchQuery)} setPosts={setRoomPosts} userId={userId} userName={userName} showToast={showToast} />;
       case 'actions':
@@ -238,7 +242,7 @@ export default function FounderHub({ userId, userName }) {
       case 'meetings':
         return <MeetingsTab data={sortWithPins(filterBySearch(meetings, searchQuery))} setData={setMeetings} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'funding':
-        return <FundingTab data={sortWithPins(filterBySearch(funding, searchQuery))} setData={setFunding} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
+        return <FundingTab data={sortWithPins(filterBySearch(funding, searchQuery))} setData={setFunding} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} gfmDonors={gfmDonors} setGfmDonors={setGfmDonors} />;
       case 'pilots':
         return <PilotsTab data={sortWithPins(filterBySearch(pilots, searchQuery))} setData={setPilots} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'product':
@@ -350,6 +354,28 @@ function FoundersRoomTab({ posts, setPosts, userId, userName, showToast }) {
     showToast('Post deleted');
   };
 
+  const handleReact = async (postId, emoji) => {
+    if (!userId) return;
+    try {
+      await toggleRoomReaction(postId, emoji, userId);
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p;
+        const reactions = p.reactions || {};
+        const users = reactions[emoji] || [];
+        const already = users.includes(userId);
+        return {
+          ...p,
+          reactions: {
+            ...reactions,
+            [emoji]: already ? users.filter(u => u !== userId) : [...users, userId],
+          },
+        };
+      }));
+    } catch {
+      showToast('Failed to react', true);
+    }
+  };
+
   const formatTime = (ts) => {
     if (!ts) return '';
     const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
@@ -361,6 +387,8 @@ function FoundersRoomTab({ posts, setPosts, userId, userName, showToast }) {
     return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const REACTIONS = ['👍', '❤️', '🔥', '💡'];
+
   return (
     <>
       <div className="hub-panel-header">
@@ -368,13 +396,16 @@ function FoundersRoomTab({ posts, setPosts, userId, userName, showToast }) {
       </div>
 
       <div className="hub-post-input-row">
-        <textarea
-          className="hub-form-textarea"
-          placeholder="Share an update, idea, or question with the council…"
-          value={newPost}
-          onChange={e => setNewPost(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) handlePost(); }}
-        />
+        <div className="hub-post-input-wrap">
+          <textarea
+            className="hub-form-textarea"
+            placeholder="Share an update, idea, or question with the council…"
+            value={newPost}
+            onChange={e => setNewPost(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) handlePost(); }}
+          />
+          <span className="hub-post-hint">⌘ + Enter to post</span>
+        </div>
         <button className="hub-btn-new" onClick={handlePost} disabled={posting || !newPost.trim()}>
           {posting ? '…' : '📤 Post'}
         </button>
@@ -397,6 +428,21 @@ function FoundersRoomTab({ posts, setPosts, userId, userName, showToast }) {
               )}
             </div>
             <div className="hub-post-body">{renderMentions(post.text)}</div>
+            <div className="hub-post-reactions">
+              {REACTIONS.map(emoji => {
+                const count = (post.reactions?.[emoji] || []).length;
+                const reacted = (post.reactions?.[emoji] || []).includes(userId);
+                return (
+                  <button
+                    key={emoji}
+                    className={`hub-reaction-btn ${reacted ? 'hub-reaction-btn--active' : ''}`}
+                    onClick={() => handleReact(post.id, emoji)}
+                  >
+                    {emoji}{count > 0 && <span className="hub-reaction-count">{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         ))
       )}
@@ -783,7 +829,7 @@ function ActivityFeed({ log, onViewAll }) {
   );
 }
 
-function OverviewTab({ counts, actionItems, decisions, meetings, product, activityLog, setActionItems, setActiveTab, showToast }) {
+function OverviewTab({ counts, actionItems, decisions, meetings, product, activityLog, gfmDonors, setActionItems, setActiveTab, showToast }) {
   const formatTime = (ts) => {
     if (!ts) return '';
     const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
@@ -796,6 +842,23 @@ function OverviewTab({ counts, actionItems, decisions, meetings, product, activi
   const recentDecisions = decisions.slice(0, 3);
   const recentProduct = product.slice(0, 2);
   const lastMeeting = meetings[0];
+
+  // Next Up: soonest due open item
+  const nextUp = openActions
+    .filter(a => a.dueDate)
+    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0]
+    || openActions.find(a => a.priority === 'Critical')
+    || openActions[0];
+
+  // GoFundMe totals
+  const GFM_GOAL = 5000;
+  const GFM_CAMPAIGN_URL = 'https://www.gofundme.com/f/help-launch-roomi-the-digital-mentor-for-indepen';
+  const allDonors = gfmDonors.length > 0 ? gfmDonors : [
+    { name: 'Melissa', amount: 200 }, { name: 'Pam', amount: 100 },
+    { name: 'Jillian Kohr', amount: 50 }, { name: 'Janice Hufnagle', amount: 100 },
+  ];
+  const gfmRaised = allDonors.reduce((s, d) => s + Number(d.amount || 0), 0);
+  const gfmPct = Math.min(100, Math.round((gfmRaised / GFM_GOAL) * 100));
 
   const cycleStatus = async (item) => {
     const idx = STATUS_CYCLE.indexOf(item.status || 'Todo');
@@ -825,6 +888,34 @@ function OverviewTab({ counts, actionItems, decisions, meetings, product, activi
         <span className="hub-overview-greeting">Council workspace at a glance</span>
       </div>
 
+      {/* Next Up Banner */}
+      {nextUp && (
+        <div className="hub-next-up" onClick={() => setActiveTab('actions')}>
+          <span className="hub-next-up-label">⚡ NEXT UP</span>
+          <span className="hub-next-up-title">{nextUp.title}</span>
+          <div className="hub-next-up-meta">
+            {nextUp.assignee && <span>→ {nextUp.assignee}</span>}
+            {nextUp.dueDate && <span className="hub-next-up-due">Due {nextUp.dueDate}</span>}
+            {nextUp.priority && <span className={`hub-priority hub-priority--${nextUp.priority.toLowerCase()}`}>{nextUp.priority}</span>}
+          </div>
+        </div>
+      )}
+
+      {/* GoFundMe Progress Bar */}
+      <div className="hub-gfm-overview" onClick={() => setActiveTab('funding')}>
+        <div className="hub-gfm-overview-top">
+          <span className="hub-gfm-overview-label">💚 GoFundMe</span>
+          <a href={GFM_CAMPAIGN_URL} target="_blank" rel="noreferrer" className="hub-gfm-overview-link" onClick={e => e.stopPropagation()}>View Campaign ↗</a>
+        </div>
+        <div className="hub-gfm-overview-row">
+          <span className="hub-gfm-overview-raised">${gfmRaised.toLocaleString()} raised</span>
+          <span className="hub-gfm-overview-pct">{gfmPct}% of ${GFM_GOAL.toLocaleString()}</span>
+        </div>
+        <div className="hub-gfm-overview-track">
+          <div className="hub-gfm-overview-fill" style={{ width: `${gfmPct}%` }} />
+        </div>
+      </div>
+
       {/* Stat Cards */}
       <div className="hub-stat-grid">
         {STAT_CARDS.map(card => (
@@ -841,7 +932,7 @@ function OverviewTab({ counts, actionItems, decisions, meetings, product, activi
         ))}
       </div>
 
-      {/* Activity Feed — full width below stats */}
+      {/* Activity Feed */}
       <ActivityFeed log={activityLog} />
 
       <div className="hub-overview-cols">
@@ -856,7 +947,7 @@ function OverviewTab({ counts, actionItems, decisions, meetings, product, activi
           ) : (
             <div className="hub-overview-list">
               {openActions.slice(0, 6).map(item => (
-                <div key={item.id} className="hub-overview-task">
+                <div key={item.id} className={`hub-overview-task ${item.priority === 'Critical' ? 'hub-overview-task--critical' : ''}`}>
                   <div className="hub-overview-task-body">
                     <span className="hub-overview-task-title">{item.title}</span>
                     {item.assignee && <span className="hub-overview-task-meta">→ {item.assignee}</span>}
@@ -1032,17 +1123,50 @@ function MeetingsTab(props) {
 const GFM_CAMPAIGN_URL = 'https://www.gofundme.com/f/help-launch-roomi-the-digital-mentor-for-indepen';
 const GFM_GOAL         = 5000;
 
-// Seeded donor list from live campaign (update manually as new donations come in)
-const GFM_DONORS = [
+// Hardcoded seed donors — superseded by Firestore hub_gfm_donors when available
+const GFM_SEED_DONORS = [
   { name: 'Melissa',        amount: 200, daysAgo: 22 },
   { name: 'Pam',           amount: 100, daysAgo: 22 },
   { name: 'Jillian Kohr',  amount:  50, daysAgo:  9 },
   { name: 'Janice Hufnagle', amount: 100, daysAgo: 14 },
 ];
 
-function GoFundMeCard() {
-  const raised  = GFM_DONORS.reduce((s, d) => s + d.amount, 0);
+function GoFundMeCard({ gfmDonors, setGfmDonors, showToast }) {
+  const [showAddDonor, setShowAddDonor] = useState(false);
+  const [donorForm, setDonorForm] = useState({ name: '', amount: '' });
+  const [saving, setSaving] = useState(false);
+
+  // Use Firestore donors if any exist, else fall back to seed
+  const donors = gfmDonors.length > 0 ? gfmDonors : GFM_SEED_DONORS;
+  const raised  = donors.reduce((s, d) => s + Number(d.amount || 0), 0);
   const pct     = Math.min(100, Math.round((raised / GFM_GOAL) * 100));
+
+  const handleAddDonor = async () => {
+    if (!donorForm.name.trim() || !donorForm.amount) return;
+    setSaving(true);
+    try {
+      const id = await saveGFMDonor({
+        name: donorForm.name.trim(),
+        amount: Number(donorForm.amount),
+        daysAgo: 0,
+      });
+      setGfmDonors(prev => [{ id, ...donorForm, amount: Number(donorForm.amount), daysAgo: 0 }, ...prev]);
+      setDonorForm({ name: '', amount: '' });
+      setShowAddDonor(false);
+      showToast('Donor added 💚');
+    } catch {
+      showToast('Failed to add donor', true);
+    }
+    setSaving(false);
+  };
+
+  const handleDeleteDonor = async (donor) => {
+    if (!donor.id) return;
+    if (!confirm(`Remove ${donor.name} from the list?`)) return;
+    await deleteGFMDonor(donor.id);
+    setGfmDonors(prev => prev.filter(d => d.id !== donor.id));
+    showToast('Donor removed');
+  };
 
   return (
     <div className="gfm-card">
@@ -1066,7 +1190,7 @@ function GoFundMeCard() {
           <span className="gfm-stat-lbl">goal</span>
         </div>
         <div className="gfm-stat">
-          <span className="gfm-stat-val">{GFM_DONORS.length}</span>
+          <span className="gfm-stat-val">{donors.length}</span>
           <span className="gfm-stat-lbl">donors</span>
         </div>
       </div>
@@ -1077,15 +1201,45 @@ function GoFundMeCard() {
       <div className="gfm-pct">{pct}% of goal</div>
 
       <div className="gfm-donors">
-        <div className="gfm-donors-title">Recent Donors</div>
-        {GFM_DONORS.slice().reverse().map((d, i) => (
-          <div key={i} className="gfm-donor-row">
+        <div className="gfm-donors-header">
+          <div className="gfm-donors-title">Recent Donors</div>
+          <button className="gfm-add-btn" onClick={() => setShowAddDonor(s => !s)}>
+            {showAddDonor ? '✕ Cancel' : '+ Add Donor'}
+          </button>
+        </div>
+
+        {showAddDonor && (
+          <div className="gfm-add-form">
+            <input
+              className="hub-form-input"
+              placeholder="Donor name"
+              value={donorForm.name}
+              onChange={e => setDonorForm(p => ({ ...p, name: e.target.value }))}
+            />
+            <input
+              className="hub-form-input"
+              type="number"
+              placeholder="Amount ($)"
+              value={donorForm.amount}
+              onChange={e => setDonorForm(p => ({ ...p, amount: e.target.value }))}
+            />
+            <button className="hub-btn-new" onClick={handleAddDonor} disabled={saving}>
+              {saving ? 'Saving…' : '💚 Add'}
+            </button>
+          </div>
+        )}
+
+        {donors.slice().reverse().map((d, i) => (
+          <div key={d.id || i} className="gfm-donor-row">
             <div className="gfm-donor-avatar">{d.name[0]}</div>
             <div className="gfm-donor-info">
               <span className="gfm-donor-name">{d.name}</span>
-              <span className="gfm-donor-when">{d.daysAgo}d ago</span>
+              <span className="gfm-donor-when">{d.daysAgo != null ? `${d.daysAgo}d ago` : 'recently'}</span>
             </div>
-            <span className="gfm-donor-amt">${d.amount}</span>
+            <span className="gfm-donor-amt">${Number(d.amount).toLocaleString()}</span>
+            {d.id && (
+              <button className="hub-btn-delete" onClick={() => handleDeleteDonor(d)} style={{ marginLeft: 8 }}>✕</button>
+            )}
           </div>
         ))}
       </div>
@@ -1093,14 +1247,15 @@ function GoFundMeCard() {
   );
 }
 
-function FundingTab(props) {
+function FundingTab({ gfmDonors, setGfmDonors, showToast, ...props }) {
   return (
     <div className="funding-tab-wrap">
-      <GoFundMeCard />
+      <GoFundMeCard gfmDonors={gfmDonors || []} setGfmDonors={setGfmDonors} showToast={showToast} />
       <div className="funding-crud-section">
         <div className="funding-crud-title">Funding Pipeline</div>
         <CrudTab
           {...props}
+          showToast={showToast}
           title="Funding"
           icon="💰"
           emptyIcon="💰"
@@ -1144,22 +1299,67 @@ function PilotsTab(props) {
 }
 
 function ProductTab(props) {
+  const [commits, setCommits] = useState([]);
+  const [commitLoading, setCommitLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('https://api.github.com/repos/BlueprintAiConsulting/roomi-prototype/commits?per_page=8')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setCommits(data);
+        setCommitLoading(false);
+      })
+      .catch(() => setCommitLoading(false));
+  }, []);
+
   return (
-    <CrudTab
-      {...props}
-      title="Product"
-      icon="🚀"
-      emptyIcon="🚀"
-      emptyText="No product updates yet."
-      collectionName="hub_product"
-      fields={[
-        { key: 'title', label: 'Title / Version', placeholder: 'e.g. v0.9 — Memory Hardening' },
-        { key: 'description', label: 'Changelog / Features', type: 'textarea', placeholder: "What shipped, what changed, what's next..." },
-        { key: 'status', label: 'Status', type: 'select', options: ['Planning', 'In Progress', 'Completed', 'Shipped'] },
-      ]}
-      saveFn={saveProductUpdate}
-      deleteFn={deleteProductUpdate}
-    />
+    <div>
+      <CrudTab
+        {...props}
+        title="Product"
+        icon="🚀"
+        emptyIcon="🚀"
+        emptyText="No product updates yet."
+        collectionName="hub_product"
+        fields={[
+          { key: 'title', label: 'Title / Version', placeholder: 'e.g. v0.9 — Memory Hardening' },
+          { key: 'description', label: 'Changelog / Features', type: 'textarea', placeholder: "What shipped, what changed, what's next..." },
+          { key: 'status', label: 'Status', type: 'select', options: ['Planning', 'In Progress', 'Completed', 'Shipped'] },
+        ]}
+        saveFn={saveProductUpdate}
+        deleteFn={deleteProductUpdate}
+      />
+
+      {/* GitHub Commits Feed */}
+      <div className="hub-commits-section">
+        <div className="hub-commits-header">
+          <h3 className="hub-commits-title">🔀 Recent Commits — roomi-prototype</h3>
+          <a className="hub-commits-link" href="https://github.com/BlueprintAiConsulting/roomi-prototype/commits/main" target="_blank" rel="noreferrer">View on GitHub ↗</a>
+        </div>
+        {commitLoading ? (
+          <div className="hub-commits-loading">Loading commits…</div>
+        ) : commits.length === 0 ? (
+          <div className="hub-commits-loading">No commits available</div>
+        ) : (
+          <div className="hub-commits-list">
+            {commits.map(c => (
+              <a
+                key={c.sha}
+                href={c.html_url}
+                target="_blank"
+                rel="noreferrer"
+                className="hub-commit-row"
+              >
+                <span className="hub-commit-sha">{c.sha.slice(0, 7)}</span>
+                <span className="hub-commit-msg">{c.commit.message.split('\n')[0].slice(0, 80)}{c.commit.message.length > 80 ? '…' : ''}</span>
+                <span className="hub-commit-author">{c.commit.author.name}</span>
+                <span className="hub-commit-date">{new Date(c.commit.author.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
