@@ -65,6 +65,17 @@ function HubSkeleton() {
   );
 }
 
+// Renders post text with @mention highlights
+function renderMentions(text) {
+  if (!text) return null;
+  const parts = text.split(/(@\w+)/g);
+  return parts.map((part, i) =>
+    part.startsWith('@')
+      ? <span key={i} className="hub-mention">{part}</span>
+      : part
+  );
+}
+
 const TABS = [
   { id: 'overview',   icon: '🏠', label: 'Overview' },
   { id: 'room',       icon: '💬', label: 'Founders Room' },
@@ -195,6 +206,11 @@ export default function FounderHub({ userId, userName }) {
     team: team.length,
   };
 
+  // Count open Critical action items for alert badge
+  const criticalOpenCount = actionItems.filter(
+    a => a.priority === 'Critical' && a.status !== 'Done'
+  ).length;
+
   // Reset form + search when switching tabs
   useEffect(() => { setShowForm(false); setSearchQuery(''); }, [activeTab]);
 
@@ -250,25 +266,30 @@ export default function FounderHub({ userId, userName }) {
             {counts[tab.id] > 0 && (
               <span className="hub-tab-badge">{counts[tab.id]}</span>
             )}
+            {tab.id === 'actions' && criticalOpenCount > 0 && (
+              <span className="hub-tab-critical" title={`${criticalOpenCount} Critical open`}>🔴</span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Search Bar */}
-      <div className="hub-search">
-        <span className="hub-search-icon">🔍</span>
-        <input
-          className="hub-search-input"
-          type="text"
-          placeholder={`Search ${TABS.find(t => t.id === activeTab)?.label || ''}…`}
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          id="hub-search"
-        />
-        {searchQuery && (
-          <button className="hub-search-clear" onClick={() => setSearchQuery('')}>✕</button>
-        )}
-      </div>
+      {/* Search Bar — hidden on overview */}
+      {activeTab !== 'overview' && (
+        <div className="hub-search">
+          <span className="hub-search-icon">🔍</span>
+          <input
+            className="hub-search-input"
+            type="text"
+            placeholder={`Search ${TABS.find(t => t.id === activeTab)?.label || ''}…`}
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            id="hub-search"
+          />
+          {searchQuery && (
+            <button className="hub-search-clear" onClick={() => setSearchQuery('')}>✕</button>
+          )}
+        </div>
+      )}
 
       <div className="hub-panel" role="tabpanel" aria-labelledby={`hub-tab-${activeTab}`}>
         <HubErrorBoundary>
@@ -368,7 +389,7 @@ function FoundersRoomTab({ posts, setPosts, userId, userName, showToast }) {
                 <button className="hub-btn-delete" onClick={() => handleDelete(post.id)}>✕</button>
               )}
             </div>
-            <div className="hub-post-body">{post.text}</div>
+            <div className="hub-post-body">{renderMentions(post.text)}</div>
           </div>
         ))
       )}

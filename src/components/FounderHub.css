@@ -1231,3 +1231,27 @@
   color: #ff3b30;
 }
 
+/* ─── @mention highlighting ──────────────────────────────── */
+
+.hub-mention {
+  display: inline;
+  background: rgba(10,132,255,0.15);
+  color: #63b3ff;
+  border-radius: 4px;
+  padding: 0 3px;
+  font-weight: 600;
+  font-size: inherit;
+}
+
+/* ─── Critical alert badge on tab ───────────────────────── */
+
+.hub-tab-critical {
+  font-size: 10px;
+  margin-left: 2px;
+  animation: hub-critical-blink 1.5s ease-in-out infinite;
+}
+
+@keyframes hub-critical-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
