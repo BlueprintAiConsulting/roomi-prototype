@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from '@google/genai';
+import { classifyError, logErrorToConsole, buildUserErrorMessage, runDiagnostics } from '../utils/errorCodes.js';
 
 const SYSTEM_PROMPT = `You are ROOMI, a warm and caring AI companion for people with intellectual and developmental disabilities. 
 Be conversational, warm, simple, and supportive. Use short sentences. Use emojis occasionally. Never be clinical or robotic.
@@ -9,6 +10,9 @@ This is a live smoke test — respond naturally as ROOMI would in production.`;
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
+// ─── Run diagnostics on load ──
+const _testDiag = runDiagnostics();
+
 export default function RawChatTest({ onExit }) {
   const [messages, setMessages] = useState([
     { role: 'roomi', text: 'Hey! 🦊 This is ROOMI live test mode. Say anything to test the chat.' }
@@ -16,6 +20,7 @@ export default function RawChatTest({ onExit }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -36,6 +41,7 @@ export default function RawChatTest({ onExit }) {
     setInput('');
     setLoading(true);
     setError('');
+    setErrorCode('');
 
     try {
       const history = [...messages, userMsg]
@@ -46,19 +52,30 @@ export default function RawChatTest({ onExit }) {
         }));
 
       if (!genai) {
-        throw new Error('Gemini API key not configured. Set VITE_GEMINI_API_KEY.');
+        const classified = classifyError(new Error('Gemini API key not configured'), { source: 'gemini' });
+        logErrorToConsole(classified);
+        setErrorCode(classified.errorCode.code);
+        throw new Error(`[${classified.errorCode.code}] ${classified.errorCode.devMessage}`);
       }
 
-      const response = await genai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: history,
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          temperature: 0.45,
-          maxOutputTokens: 512,
-          topP: 0.85,
-        },
-      });
+      let response;
+      try {
+        response = await genai.models.generateContent({
+          model: 'gemini-2.0-flash',
+          contents: history,
+          config: {
+            systemInstruction: SYSTEM_PROMPT,
+            temperature: 0.45,
+            maxOutputTokens: 512,
+            topP: 0.85,
+          },
+        });
+      } catch (geminiErr) {
+        const classified = classifyError(geminiErr, { source: 'gemini' });
+        logErrorToConsole(classified);
+        setErrorCode(classified.errorCode.code);
+        throw new Error(`[${classified.errorCode.code}] ${classified.errorCode.devMessage}`);
+      }
 
       const reply = response?.text?.trim()
         || response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
@@ -66,10 +83,13 @@ export default function RawChatTest({ onExit }) {
       if (reply) {
         setMessages(prev => [...prev, { role: 'roomi', text: reply }]);
       } else {
-        throw new Error('No response from ROOMI');
+        const classified = classifyError(new Error('No response content from Gemini'), { source: 'gemini' });
+        logErrorToConsole(classified);
+        setErrorCode(classified.errorCode.code);
+        throw new Error(`[${classified.errorCode.code}] Empty response from API`);
       }
     } catch (err) {
-      setError(`Error: ${err.message}`);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -141,8 +161,23 @@ export default function RawChatTest({ onExit }) {
         )}
 
         {error && (
-          <div style={{ color: '#ff6b6b', fontSize: '0.8rem', padding: '0.5rem', textAlign: 'center' }}>
-            {error}
+          <div style={{
+            background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)',
+            borderRadius: '10px', padding: '0.75rem 1rem', margin: '0.25rem 0',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ff6b6b' }}>⚠️ ERROR</span>
+              {errorCode && (
+                <span style={{
+                  background: 'rgba(255,107,107,0.2)', color: '#ff8a8a',
+                  fontSize: '0.65rem', padding: '2px 8px', borderRadius: '20px',
+                  fontWeight: 600, fontFamily: 'monospace', letterSpacing: '0.04em',
+                }}>{errorCode}</span>
+              )}
+            </div>
+            <div style={{ color: '#ff8a8a', fontSize: '0.78rem', lineHeight: 1.4 }}>
+              {error}
+            </div>
           </div>
         )}
 

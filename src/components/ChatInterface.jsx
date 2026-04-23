@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { demoConversations, dailySchedule, userProfile } from '../data/sampleData.js';
 import { saveConversation, getConversations, saveDailySummary, getRecentSummaries, saveLearnedFacts, getLearnedFacts, getWeeklySummaries, saveWeeklySummary, getActiveSystemPrompt, logAnalyticsTurn, logFeedback, logSafetyEvent } from '../hooks/useFirestore.js';
 import { buildKnowledgePrompt } from '../data/roomiKnowledge.js';
+import { classifyError, logErrorToConsole, buildUserErrorMessage, runDiagnostics, ERROR_CODES } from '../utils/errorCodes.js';
 import { GoogleGenAI } from '@google/genai';
 import VoiceMode from './VoiceMode.jsx';
 import NotificationPrompt from './NotificationPrompt.jsx';
@@ -11,6 +12,13 @@ import './ChatInterface.css';
 // ─── Gemini client (direct browser calls, no server needed) ──
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
+
+// ─── Startup diagnostics (runs once on module load) ──
+const _startupIssues = runDiagnostics();
+if (!genai) {
+  const err = classifyError(new Error('Gemini API key not configured'), { source: 'gemini' });
+  logErrorToConsole(err);
+}
 
 const SCENARIOS = [
   { id: 'morning',    label: '🌅 Morning',  name: 'Morning Check-In',   icon: '🌅', short: 'Morning'  },
@@ -909,26 +917,36 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
 
         if (genai) {
           // ─── Direct Gemini call (no server needed) ─────────
-          const response = await genai.models.generateContent({
-            model: 'gemini-2.0-flash',
-            contents: conversationHistoryRef.current,
-            config: {
-              systemInstruction: ACTIVE_SYSTEM_PROMPT,
-              safetySettings: [
-                { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-                { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
-                { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-              ],
-              temperature: 0.45,
-              maxOutputTokens: 512,
-              topP: 0.85,
-              stopSequences: ['\n\n\n'],
-            },
-          });
+          let response;
+          try {
+            response = await genai.models.generateContent({
+              model: 'gemini-2.0-flash',
+              contents: conversationHistoryRef.current,
+              config: {
+                systemInstruction: ACTIVE_SYSTEM_PROMPT,
+                safetySettings: [
+                  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_LOW_AND_ABOVE' },
+                  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+                ],
+                temperature: 0.45,
+                maxOutputTokens: 512,
+                topP: 0.85,
+                stopSequences: ['\n\n\n'],
+              },
+            });
+          } catch (geminiErr) {
+            // Classify and re-throw with ROOMI error code
+            const classified = classifyError(geminiErr, { source: 'gemini' });
+            logErrorToConsole(classified);
+            throw Object.assign(geminiErr, { _roomiClassified: classified });
+          }
 
           const blockReason = response?.candidates?.[0]?.finishReason;
           if (blockReason === 'SAFETY' || !response?.candidates?.[0]?.content) {
+            const safetyErr = classifyError(new Error('Response blocked by safety filters'), { source: 'gemini' });
+            logErrorToConsole(safetyErr);
             roomiText = `I'm not sure how to help with that one, ${userName}. Want to talk about what's next on your day instead? 🦊`;
           } else {
             roomiText = response?.text?.trim()
@@ -960,21 +978,45 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
           const controller = new AbortController();
           const fetchTimeout = setTimeout(() => controller.abort(), 12000);
 
-          const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-            signal: controller.signal,
-          });
+          let res;
+          try {
+            res = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+              signal: controller.signal,
+            });
+          } catch (fetchErr) {
+            clearTimeout(fetchTimeout);
+            const classified = classifyError(fetchErr, { source: 'server' });
+            logErrorToConsole(classified);
+            throw Object.assign(fetchErr, { _roomiClassified: classified });
+          }
 
           clearTimeout(fetchTimeout);
 
-          if (res.status === 429) throw new Error('Rate limited by server');
+          if (res.status === 429) {
+            const rateLimitErr = classifyError(new Error('Rate limited by server'), { source: 'server', httpStatus: 429 });
+            logErrorToConsole(rateLimitErr);
+            throw Object.assign(new Error('Rate limited by server'), { _roomiClassified: rateLimitErr });
+          }
+          if (res.status === 401 || res.status === 403) {
+            const authErr = classifyError(new Error(`Server returned ${res.status}`), { source: 'server', httpStatus: res.status });
+            logErrorToConsole(authErr);
+            throw Object.assign(new Error(`Auth error: ${res.status}`), { _roomiClassified: authErr });
+          }
+          if (!res.ok) {
+            const serverErr = classifyError(new Error(`Server returned ${res.status}`), { source: 'server', httpStatus: res.status });
+            logErrorToConsole(serverErr);
+            throw Object.assign(new Error(`Server error: ${res.status}`), { _roomiClassified: serverErr });
+          }
 
           const data = await res.json();
           const blockReason = data?.candidates?.[0]?.finishReason;
 
           if (blockReason === 'SAFETY' || !data?.candidates?.[0]?.content) {
+            const safetyErr = classifyError(new Error('Response blocked by safety'), { source: 'server' });
+            logErrorToConsole(safetyErr);
             roomiText = `I'm not sure how to help with that one, ${userName}. Want to talk about what's next on your day instead? 🦊`;
           } else {
             roomiText = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
@@ -1034,21 +1076,28 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
 
       } catch (err) {
         lastError = err;
+        // Classify the error if not already classified
+        if (!err._roomiClassified) {
+          err._roomiClassified = classifyError(err, { source: genai ? 'gemini' : 'server' });
+          logErrorToConsole(err._roomiClassified);
+        }
         attempt++;
         if (attempt <= maxRetries) {
-          // Wait 2s before retry
+          console.warn(`[ROOMI] Retry ${attempt}/${maxRetries} after ${err._roomiClassified?.errorCode?.code || 'unknown'}...`);
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
     }
 
-    // All retries failed — show graceful fallback
+    // All retries failed — show detailed error with code
     setIsTyping(false);
-    const fallback = `Hmm, I lost my train of thought. Say that again, ${userName}? 🦊`;
+    const classified = lastError?._roomiClassified || classifyError(lastError || new Error('Unknown error'), { source: genai ? 'gemini' : 'server' });
+    logErrorToConsole(classified);
+    const fallback = buildUserErrorMessage(classified, userName);
     conversationHistoryRef.current.push({ role: 'model', parts: [{ text: fallback }] });
-    setMessages(prev => [...prev, { sender: 'roomi', text: fallback, id: Date.now() + 1 }]);
+    setMessages(prev => [...prev, { sender: 'roomi', text: fallback, id: Date.now() + 1, errorCode: classified.errorCode.code }]);
     playNotificationSound();
-    console.error('Gemini API failed after retries:', lastError);
+    console.error(`[ROOMI] All retries exhausted — ${classified.errorCode.code}:`, lastError);
   }, [inputValue, checkSafetyFilters, validateResponse, isOffline, checkRateLimit, triggerMemoryCapture, userName, userId, activeScenario, notifPromptShown, ACTIVE_SYSTEM_PROMPT]);
 
   const handleScenarioSelect = (id) => {
