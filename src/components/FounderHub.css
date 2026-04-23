@@ -1251,7 +1251,127 @@
   animation: hub-critical-blink 1.5s ease-in-out infinite;
 }
 
-@keyframes hub-critical-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.4; }
+/* ─── GoFundMe Campaign Card ─────────────────────────────── */
+
+.funding-tab-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
+
+.funding-crud-section { display: flex; flex-direction: column; gap: 0; }
+.funding-crud-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.gfm-card {
+  background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.06) 100%);
+  border: 1px solid rgba(16,185,129,0.25);
+  border-radius: 16px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gfm-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.gfm-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #10b981;
+}
+.gfm-link {
+  font-size: 12px;
+  font-weight: 600;
+  color: #10b981;
+  text-decoration: none;
+  opacity: 0.85;
+  transition: opacity .15s;
+}
+.gfm-link:hover { opacity: 1; text-decoration: underline; }
+.gfm-headline {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.gfm-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.gfm-stat { display: flex; flex-direction: column; gap: 2px; }
+.gfm-stat-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: #10b981;
+  letter-spacing: -.02em;
+}
+.gfm-stat-lbl {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.gfm-bar-track {
+  height: 10px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.gfm-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #059669, #10b981, #34d399);
+  border-radius: 99px;
+  transition: width 1s ease;
+}
+.gfm-pct { font-size: 12px; color: var(--text-muted); margin-top: -8px; }
+
+.gfm-donors { display: flex; flex-direction: column; gap: 8px; }
+.gfm-donors-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 2px;
+}
+.gfm-donor-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+}
+.gfm-donor-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #059669, #10b981);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.gfm-donor-info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+.gfm-donor-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.gfm-donor-when { font-size: 11px; color: var(--text-muted); }
+.gfm-donor-amt  { font-size: 14px; font-weight: 700; color: #10b981; }

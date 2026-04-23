@@ -957,27 +957,100 @@ function MeetingsTab(props) {
   );
 }
 
-function FundingTab(props) {
+// ─── GoFundMe Campaign Tracker ──────────────────────────────
+
+const GFM_CAMPAIGN_URL = 'https://www.gofundme.com/f/help-launch-roomi-the-digital-mentor-for-indepen';
+const GFM_GOAL         = 5000;
+
+// Seeded donor list from live campaign (update manually as new donations come in)
+const GFM_DONORS = [
+  { name: 'Melissa',        amount: 200, daysAgo: 22 },
+  { name: 'Pam',           amount: 100, daysAgo: 22 },
+  { name: 'Jillian Kohr',  amount:  50, daysAgo:  9 },
+  { name: 'Janice Hufnagle', amount: 100, daysAgo: 14 },
+];
+
+function GoFundMeCard() {
+  const raised  = GFM_DONORS.reduce((s, d) => s + d.amount, 0);
+  const pct     = Math.min(100, Math.round((raised / GFM_GOAL) * 100));
+
   return (
-    <CrudTab
-      {...props}
-      title="Funding"
-      icon="💰"
-      emptyIcon="💰"
-      emptyText="No funding entries yet."
-      collectionName="hub_funding"
-      fields={[
-        { key: 'source', label: 'Source / Program', placeholder: 'e.g. SBIR Phase I, Angel Investor' },
-        { key: 'description', label: 'Details', type: 'textarea', placeholder: 'Application status, requirements, notes…' },
-        { key: 'amount', label: 'Amount ($)', type: 'number', placeholder: '50000' },
-        { key: 'status', label: 'Status', type: 'select', options: ['Planning', 'Applied', 'Pending', 'Approved', 'Rejected', 'Received'] },
-        { key: 'deadline', label: 'Deadline', type: 'date' },
-      ]}
-      saveFn={saveFundingEntry}
-      deleteFn={deleteFundingEntry}
-    />
+    <div className="gfm-card">
+      <div className="gfm-header">
+        <div className="gfm-title-row">
+          <span className="gfm-label">GoFundMe Campaign</span>
+          <a className="gfm-link" href={GFM_CAMPAIGN_URL} target="_blank" rel="noreferrer">
+            View Campaign ↗
+          </a>
+        </div>
+        <div className="gfm-headline">Help Launch ROOMI — The Digital Mentor for Independent Living</div>
+      </div>
+
+      <div className="gfm-stats">
+        <div className="gfm-stat">
+          <span className="gfm-stat-val">${raised.toLocaleString()}</span>
+          <span className="gfm-stat-lbl">raised</span>
+        </div>
+        <div className="gfm-stat">
+          <span className="gfm-stat-val">${GFM_GOAL.toLocaleString()}</span>
+          <span className="gfm-stat-lbl">goal</span>
+        </div>
+        <div className="gfm-stat">
+          <span className="gfm-stat-val">{GFM_DONORS.length}</span>
+          <span className="gfm-stat-lbl">donors</span>
+        </div>
+      </div>
+
+      <div className="gfm-bar-track">
+        <div className="gfm-bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+      <div className="gfm-pct">{pct}% of goal</div>
+
+      <div className="gfm-donors">
+        <div className="gfm-donors-title">Recent Donors</div>
+        {GFM_DONORS.slice().reverse().map((d, i) => (
+          <div key={i} className="gfm-donor-row">
+            <div className="gfm-donor-avatar">{d.name[0]}</div>
+            <div className="gfm-donor-info">
+              <span className="gfm-donor-name">{d.name}</span>
+              <span className="gfm-donor-when">{d.daysAgo}d ago</span>
+            </div>
+            <span className="gfm-donor-amt">${d.amount}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
+
+function FundingTab(props) {
+  return (
+    <div className="funding-tab-wrap">
+      <GoFundMeCard />
+      <div className="funding-crud-section">
+        <div className="funding-crud-title">Funding Pipeline</div>
+        <CrudTab
+          {...props}
+          title="Funding"
+          icon="💰"
+          emptyIcon="💰"
+          emptyText="No funding entries yet."
+          collectionName="hub_funding"
+          fields={[
+            { key: 'source', label: 'Source / Program', placeholder: 'e.g. SBIR Phase I, Angel Investor' },
+            { key: 'description', label: 'Details', type: 'textarea', placeholder: 'Application status, requirements, notes…' },
+            { key: 'amount', label: 'Amount ($)', type: 'number', placeholder: '50000' },
+            { key: 'status', label: 'Status', type: 'select', options: ['Planning', 'Applied', 'Pending', 'Approved', 'Rejected', 'Received'] },
+            { key: 'deadline', label: 'Deadline', type: 'date' },
+          ]}
+          saveFn={saveFundingEntry}
+          deleteFn={deleteFundingEntry}
+        />
+      </div>
+    </div>
+  );
+}
+
 
 function PilotsTab(props) {
   return (
