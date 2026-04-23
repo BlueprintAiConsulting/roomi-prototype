@@ -16,7 +16,7 @@ import {
   getFileTypeInfo, formatFileSize,
   subscribeDocuments, subscribeDecisions, subscribeMeetings, subscribeFunding,
   subscribePilots, subscribeProduct, subscribeTeam, subscribeRoom,
-  subscribeActionItems, subscribeAll,
+  subscribeActionItems, subscribeAll, subscribeActivity, logActivity,
 } from '../hooks/useHub.js';
 import './FounderHub.css';
 
@@ -142,6 +142,7 @@ export default function FounderHub({ userId, userName }) {
   const [team, setTeam] = useState([]);
   const [roomPosts, setRoomPosts] = useState([]);
   const [actionItems, setActionItems] = useState([]);
+  const [activityLog, setActivityLog] = useState([]);
 
   // Form visibility
   const [showForm, setShowForm] = useState(false);
@@ -172,6 +173,7 @@ export default function FounderHub({ userId, userName }) {
         onTeam:        setTeamSafe,
         onRoom:        setRoomPosts,
         onActionItems: setActionItems,
+        onActivity:    setActivityLog,
       });
     } else {
       switch (activeTab) {
@@ -224,23 +226,23 @@ export default function FounderHub({ userId, userName }) {
 
     switch (activeTab) {
       case 'overview':
-        return <OverviewTab counts={counts} actionItems={actionItems} decisions={decisions} meetings={meetings} product={product} setActionItems={setActionItems} setActiveTab={setActiveTab} showToast={showToast} />;
+        return <OverviewTab counts={counts} actionItems={actionItems} decisions={decisions} meetings={meetings} product={product} activityLog={activityLog} setActionItems={setActionItems} setActiveTab={setActiveTab} showToast={showToast} />;
       case 'room':
         return <FoundersRoomTab posts={filterBySearch(roomPosts, searchQuery)} setPosts={setRoomPosts} userId={userId} userName={userName} showToast={showToast} />;
       case 'actions':
-        return <ActionItemsTab data={sortWithPins(filterBySearch(actionItems, searchQuery))} setData={setActionItems} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <ActionItemsTab data={sortWithPins(filterBySearch(actionItems, searchQuery))} setData={setActionItems} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'documents':
-        return <DocumentsTab documents={sortWithPins(filterBySearch(documents, searchQuery))} setDocuments={setDocuments} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <DocumentsTab documents={sortWithPins(filterBySearch(documents, searchQuery))} setDocuments={setDocuments} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'decisions':
-        return <DecisionsTab data={sortWithPins(filterBySearch(decisions, searchQuery))} setData={setDecisions} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <DecisionsTab data={sortWithPins(filterBySearch(decisions, searchQuery))} setData={setDecisions} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'meetings':
-        return <MeetingsTab data={sortWithPins(filterBySearch(meetings, searchQuery))} setData={setMeetings} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <MeetingsTab data={sortWithPins(filterBySearch(meetings, searchQuery))} setData={setMeetings} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'funding':
-        return <FundingTab data={sortWithPins(filterBySearch(funding, searchQuery))} setData={setFunding} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <FundingTab data={sortWithPins(filterBySearch(funding, searchQuery))} setData={setFunding} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'pilots':
-        return <PilotsTab data={sortWithPins(filterBySearch(pilots, searchQuery))} setData={setPilots} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <PilotsTab data={sortWithPins(filterBySearch(pilots, searchQuery))} setData={setPilots} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'product':
-        return <ProductTab data={sortWithPins(filterBySearch(product, searchQuery))} setData={setProduct} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <ProductTab data={sortWithPins(filterBySearch(product, searchQuery))} setData={setProduct} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'team':
         return <TeamTab data={filterBySearch(team, searchQuery)} />;
       default:
@@ -526,7 +528,7 @@ function DocumentsTab({ documents, setDocuments, userId, userName, showToast }) 
 
 // ─── Generic CRUD Tab Builder ───────────────────────────────
 
-function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, statusOptions, saveFn, deleteFn, collectionName, userId, userName, showForm, setShowForm, showToast }) {
+function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, statusOptions, saveFn, deleteFn, collectionName, userId, userName, showForm, setShowForm, showToast, onActivityLog }) {
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -539,6 +541,7 @@ function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, sta
         await saveFn(formData, editingId);
         setData(prev => prev.map(d => d.id === editingId ? { ...d, ...formData, updatedAt: { seconds: Date.now() / 1000 } } : d));
         showToast('Updated');
+        onActivityLog?.({ action: 'updated', section: title, title: formData[fields[0]?.key] || 'entry' });
         setEditingId(null);
       } else {
         // Create new
@@ -555,6 +558,7 @@ function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, sta
           updatedAt: { seconds: Date.now() / 1000 },
         }, ...prev]);
         showToast(`${title.replace(/s$/, '')} created`);
+        onActivityLog?.({ action: 'added', section: title, title: formData[fields[0]?.key] || 'entry' });
       }
       setFormData({});
       setShowForm(false);
@@ -584,6 +588,7 @@ function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, sta
     await deleteFn(item.id);
     setData(prev => prev.filter(d => d.id !== item.id));
     showToast(`Deleted`);
+    onActivityLog?.({ action: 'deleted', section: title, title: label });
   };
 
   const handlePin = async (item) => {
@@ -716,7 +721,69 @@ function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, sta
 
 const STATUS_CYCLE = ['Todo', 'In Progress', 'Blocked', 'Done'];
 
-function OverviewTab({ counts, actionItems, decisions, meetings, product, setActionItems, setActiveTab, showToast }) {
+// ─── Activity Feed ──────────────────────────────────────────
+
+const ACTION_META = {
+  added:     { verb: 'added',     color: '#34c759' },
+  updated:   { verb: 'updated',   color: '#ff9500' },
+  deleted:   { verb: 'deleted',   color: '#ff3b30' },
+  completed: { verb: 'completed', color: '#5e5ce6' },
+  posted:    { verb: 'posted',    color: '#63d2ff' },
+};
+
+function relativeTime(ts) {
+  if (!ts) return '';
+  const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+  const diff = Math.floor((Date.now() - date) / 1000);
+  if (diff < 60)  return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function ActivityFeed({ log, onViewAll }) {
+  if (!log || log.length === 0) {
+    return (
+      <div className="hub-overview-section">
+        <div className="hub-overview-section-header">
+          <h3>⚡ Activity</h3>
+        </div>
+        <p className="hub-overview-empty">No activity yet — start collaborating!</p>
+      </div>
+    );
+  }
+  return (
+    <div className="hub-overview-section hub-activity-feed">
+      <div className="hub-overview-section-header">
+        <h3>⚡ Activity</h3>
+        <span className="hub-activity-live">● live</span>
+      </div>
+      <div className="hub-activity-list">
+        {log.slice(0, 15).map((entry, i) => {
+          const meta = ACTION_META[entry.action] || ACTION_META.updated;
+          return (
+            <div key={entry.id || i} className="hub-activity-row">
+              <div className="hub-activity-avatar">
+                {(entry.actor || 'F')[0].toUpperCase()}
+              </div>
+              <div className="hub-activity-body">
+                <span className="hub-activity-actor">{entry.actor || 'Founder'}</span>
+                {' '}
+                <span className="hub-activity-verb" style={{ color: meta.color }}>{meta.verb}</span>
+                {' a '}
+                <span className="hub-activity-section">{entry.section}</span>
+                {entry.title ? <span className="hub-activity-title"> — {entry.title.slice(0, 40)}{entry.title.length > 40 ? '…' : ''}</span> : null}
+              </div>
+              <span className="hub-activity-time">{relativeTime(entry.createdAt)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function OverviewTab({ counts, actionItems, decisions, meetings, product, activityLog, setActionItems, setActiveTab, showToast }) {
   const formatTime = (ts) => {
     if (!ts) return '';
     const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
@@ -773,6 +840,9 @@ function OverviewTab({ counts, actionItems, decisions, meetings, product, setAct
           </button>
         ))}
       </div>
+
+      {/* Activity Feed — full width below stats */}
+      <ActivityFeed log={activityLog} />
 
       <div className="hub-overview-cols">
         {/* Open Action Items */}

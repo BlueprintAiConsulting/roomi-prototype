@@ -542,9 +542,31 @@ export const subscribeTeam        = (cb) => makeSubscriber('hub_team',          
 export const subscribeActionItems = (cb) => makeSubscriber('hub_action_items',   'createdAt',   cb);
 export const subscribeRoom        = (cb) => makeSubscriber('hub_founders_room',  'createdAt',   cb, 50);
 
+// ─── Activity Log ────────────────────────────────────────────
+// Each meaningful create/update/delete writes a compact entry to hub_activity.
+
+export async function logActivity({ actor, action, section, title }) {
+  if (!db) return;
+  try {
+    await addDoc(collection(db, 'hub_activity'), {
+      actor,          // e.g. "Wade"
+      action,         // "added" | "updated" | "deleted" | "completed" | "posted"
+      section,        // human-readable section name, e.g. "Action Items"
+      title,          // short item title/snippet
+      createdAt: serverTimestamp(),
+    });
+  } catch (err) {
+    // Non-blocking — never throw from activity logging
+    console.warn('[hub] activity log write failed:', err);
+  }
+}
+
+export const subscribeActivity = (cb) =>
+  makeSubscriber('hub_activity', 'createdAt', cb, 30);
+
 /** Subscribe to ALL collections at once (used by Overview tab).
  *  Returns a single cleanup function that tears down all listeners. */
-export function subscribeAll({ onDocuments, onDecisions, onMeetings, onFunding, onPilots, onProduct, onTeam, onRoom, onActionItems }) {
+export function subscribeAll({ onDocuments, onDecisions, onMeetings, onFunding, onPilots, onProduct, onTeam, onRoom, onActionItems, onActivity }) {
   const unsubs = [
     subscribeDocuments(onDocuments),
     subscribeDecisions(onDecisions),
@@ -555,6 +577,8 @@ export function subscribeAll({ onDocuments, onDecisions, onMeetings, onFunding, 
     subscribeTeam(onTeam),
     subscribeRoom(onRoom),
     subscribeActionItems(onActionItems),
+    ...(onActivity ? [subscribeActivity(onActivity)] : []),
   ];
   return () => unsubs.forEach(u => u());
 }
+
