@@ -1,7 +1,7 @@
 // FounderHub.jsx — ROOMI Founder Hub Dashboard
 // Centralized workspace for the founding council: documents, decisions, meetings, funding, pilots, product, team, discussion
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Component } from 'react';
 import {
   uploadHubDocument, getHubDocuments, deleteHubDocument,
   saveDecision, getDecisions, deleteDecision,
@@ -11,12 +11,63 @@ import {
   saveProductUpdate, getProductUpdates, deleteProductUpdate,
   getTeamMembers, saveTeamMember,
   postToFoundersRoom, getFoundersRoomPosts, deleteFoundersRoomPost,
+  saveActionItem, getActionItems, deleteActionItem,
+  togglePin,
   getFileTypeInfo, formatFileSize,
 } from '../hooks/useHub.js';
 import './FounderHub.css';
 
+// ─── Error Boundary ─────────────────────────────────────────
+
+class HubErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('[hub] Error boundary caught:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="hub-error">
+          <span className="hub-error-icon">⚠️</span>
+          <h3 className="hub-error-title">Something went wrong</h3>
+          <p className="hub-error-text">{this.state.error?.message || 'An unexpected error occurred.'}</p>
+          <button className="hub-btn-new" onClick={() => this.setState({ hasError: false, error: null })}>
+            ↻ Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ─── Skeleton Loader ────────────────────────────────────────
+
+function HubSkeleton() {
+  return (
+    <div className="hub-skeleton">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="hub-skeleton-row">
+          <div className="hub-skeleton-avatar hub-skeleton-shimmer" />
+          <div className="hub-skeleton-body">
+            <div className="hub-skeleton-line hub-skeleton-line--title hub-skeleton-shimmer" />
+            <div className="hub-skeleton-line hub-skeleton-line--meta hub-skeleton-shimmer" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const TABS = [
   { id: 'room',      icon: '💬', label: 'Founders Room' },
+  { id: 'actions',   icon: '✅', label: 'Action Items' },
   { id: 'documents',  icon: '📄', label: 'Documents' },
   { id: 'decisions',  icon: '📋', label: 'Decisions' },
   { id: 'meetings',   icon: '📅', label: 'Meetings' },
@@ -25,6 +76,30 @@ const TABS = [
   { id: 'product',    icon: '🚀', label: 'Product' },
   { id: 'team',       icon: '👥', label: 'Team' },
 ];
+
+// ─── Search Utility ─────────────────────────────────────────
+
+function filterBySearch(items, query) {
+  if (!query?.trim()) return items;
+  const q = query.toLowerCase();
+  return items.filter(item => {
+    const fields = [
+      item.title, item.text, item.description, item.notes,
+      item.source, item.organization, item.contact,
+      item.fileName, item.authorName, item.creatorName,
+      item.assignee, item.name,
+    ];
+    return fields.some(f => f && String(f).toLowerCase().includes(q));
+  });
+}
+
+function sortWithPins(items) {
+  return [...items].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1;
+    if (!a.pinned && b.pinned) return 1;
+    return 0;
+  });
+}
 
 // Founding council defaults (used when Firestore hub_team is empty)
 const DEFAULT_TEAM = [
@@ -40,6 +115,7 @@ export default function FounderHub({ userId, userName }) {
   const [activeTab, setActiveTab] = useState('room');
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Data stores
   const [documents, setDocuments] = useState([]);
@@ -50,6 +126,7 @@ export default function FounderHub({ userId, userName }) {
   const [product, setProduct] = useState([]);
   const [team, setTeam] = useState([]);
   const [roomPosts, setRoomPosts] = useState([]);
+  const [actionItems, setActionItems] = useState([]);
 
   // Form visibility
   const [showForm, setShowForm] = useState(false);
@@ -106,6 +183,11 @@ export default function FounderHub({ userId, userName }) {
             if (!cancelled) setRoomPosts(data);
             break;
           }
+          case 'actions': {
+            const data = await getActionItems();
+            if (!cancelled) setActionItems(data);
+            break;
+          }
         }
       } catch (err) {
         console.error('[hub] Load error:', err);
@@ -119,6 +201,7 @@ export default function FounderHub({ userId, userName }) {
   // Counts for tab badges
   const counts = {
     room: roomPosts.length,
+    actions: actionItems.length,
     documents: documents.length,
     decisions: decisions.length,
     meetings: meetings.length,
@@ -128,36 +211,31 @@ export default function FounderHub({ userId, userName }) {
     team: team.length,
   };
 
-  // Reset form when switching tabs
-  useEffect(() => { setShowForm(false); }, [activeTab]);
+  // Reset form + search when switching tabs
+  useEffect(() => { setShowForm(false); setSearchQuery(''); }, [activeTab]);
 
   const renderTabContent = () => {
-    if (loading) {
-      return (
-        <div className="hub-loading">
-          <div className="hub-loading-spinner" />
-          <div className="hub-loading-text">Loading…</div>
-        </div>
-      );
-    }
+    if (loading) return <HubSkeleton />;
 
     switch (activeTab) {
       case 'room':
-        return <FoundersRoomTab posts={roomPosts} setPosts={setRoomPosts} userId={userId} userName={userName} showToast={showToast} />;
+        return <FoundersRoomTab posts={filterBySearch(roomPosts, searchQuery)} setPosts={setRoomPosts} userId={userId} userName={userName} showToast={showToast} />;
+      case 'actions':
+        return <ActionItemsTab data={sortWithPins(filterBySearch(actionItems, searchQuery))} setData={setActionItems} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
       case 'documents':
-        return <DocumentsTab documents={documents} setDocuments={setDocuments} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <DocumentsTab documents={sortWithPins(filterBySearch(documents, searchQuery))} setDocuments={setDocuments} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
       case 'decisions':
-        return <DecisionsTab data={decisions} setData={setDecisions} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <DecisionsTab data={sortWithPins(filterBySearch(decisions, searchQuery))} setData={setDecisions} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
       case 'meetings':
-        return <MeetingsTab data={meetings} setData={setMeetings} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <MeetingsTab data={sortWithPins(filterBySearch(meetings, searchQuery))} setData={setMeetings} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
       case 'funding':
-        return <FundingTab data={funding} setData={setFunding} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <FundingTab data={sortWithPins(filterBySearch(funding, searchQuery))} setData={setFunding} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
       case 'pilots':
-        return <PilotsTab data={pilots} setData={setPilots} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <PilotsTab data={sortWithPins(filterBySearch(pilots, searchQuery))} setData={setPilots} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
       case 'product':
-        return <ProductTab data={product} setData={setProduct} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
+        return <ProductTab data={sortWithPins(filterBySearch(product, searchQuery))} setData={setProduct} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} />;
       case 'team':
-        return <TeamTab data={team} />;
+        return <TeamTab data={filterBySearch(team, searchQuery)} />;
       default:
         return null;
     }
@@ -190,8 +268,26 @@ export default function FounderHub({ userId, userName }) {
         ))}
       </div>
 
+      {/* Search Bar */}
+      <div className="hub-search">
+        <span className="hub-search-icon">🔍</span>
+        <input
+          className="hub-search-input"
+          type="text"
+          placeholder={`Search ${TABS.find(t => t.id === activeTab)?.label || ''}…`}
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          id="hub-search"
+        />
+        {searchQuery && (
+          <button className="hub-search-clear" onClick={() => setSearchQuery('')}>✕</button>
+        )}
+      </div>
+
       <div className="hub-panel" role="tabpanel" aria-labelledby={`hub-tab-${activeTab}`}>
-        {renderTabContent()}
+        <HubErrorBoundary>
+          {renderTabContent()}
+        </HubErrorBoundary>
       </div>
 
       {toast && (
@@ -418,32 +514,56 @@ function DocumentsTab({ documents, setDocuments, userId, userName, showToast }) 
 
 // ─── Generic CRUD Tab Builder ───────────────────────────────
 
-function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, statusOptions, saveFn, deleteFn, userId, userName, showForm, setShowForm, showToast }) {
+function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, statusOptions, saveFn, deleteFn, collectionName, userId, userName, showForm, setShowForm, showToast }) {
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload = {
-        ...formData,
-        createdBy: userId,
-        creatorName: userName || 'Founder',
-      };
-      const id = await saveFn(payload);
-      setData(prev => [{
-        id,
-        ...payload,
-        createdAt: { seconds: Date.now() / 1000 },
-        updatedAt: { seconds: Date.now() / 1000 },
-      }, ...prev]);
+      if (editingId) {
+        // Update existing
+        await saveFn(formData, editingId);
+        setData(prev => prev.map(d => d.id === editingId ? { ...d, ...formData, updatedAt: { seconds: Date.now() / 1000 } } : d));
+        showToast('Updated');
+        setEditingId(null);
+      } else {
+        // Create new
+        const payload = {
+          ...formData,
+          createdBy: userId,
+          creatorName: userName || 'Founder',
+        };
+        const id = await saveFn(payload);
+        setData(prev => [{
+          id,
+          ...payload,
+          createdAt: { seconds: Date.now() / 1000 },
+          updatedAt: { seconds: Date.now() / 1000 },
+        }, ...prev]);
+        showToast(`${title.replace(/s$/, '')} created`);
+      }
       setFormData({});
       setShowForm(false);
-      showToast(`${title.replace(/s$/, '')} created`);
     } catch {
       showToast(`Failed to save`, true);
     }
     setSaving(false);
+  };
+
+  const handleEdit = (item) => {
+    const prefill = {};
+    fields.forEach(f => { prefill[f.key] = item[f.key] || ''; });
+    setFormData(prefill);
+    setEditingId(item.id);
+    setShowForm(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setFormData({});
+    setShowForm(false);
   };
 
   const handleDelete = async (item) => {
@@ -454,64 +574,77 @@ function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, sta
     showToast(`Deleted`);
   };
 
+  const handlePin = async (item) => {
+    if (!collectionName) return;
+    try {
+      await togglePin(collectionName, item.id, !!item.pinned);
+      setData(prev => prev.map(d => d.id === item.id ? { ...d, pinned: !d.pinned } : d));
+      showToast(item.pinned ? 'Unpinned' : 'Pinned 📌');
+    } catch {
+      showToast('Failed to pin', true);
+    }
+  };
+
   const formatTime = (ts) => {
     if (!ts) return '';
     const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const renderForm = () => (
+    <div className="hub-form">
+      <h3 className="hub-form-title">{editingId ? 'Edit Entry' : 'New Entry'}</h3>
+      {fields.map(field => (
+        <div key={field.key} className="hub-form-row">
+          <label className="hub-form-label">{field.label}</label>
+          {field.type === 'textarea' ? (
+            <textarea
+              className="hub-form-textarea"
+              placeholder={field.placeholder || ''}
+              value={formData[field.key] || ''}
+              onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+            />
+          ) : field.type === 'select' ? (
+            <select
+              className="hub-form-select"
+              value={formData[field.key] || ''}
+              onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+            >
+              <option value="">Select…</option>
+              {(field.options || statusOptions || []).map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              className="hub-form-input"
+              type={field.type || 'text'}
+              placeholder={field.placeholder || ''}
+              value={formData[field.key] || ''}
+              onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
+            />
+          )}
+        </div>
+      ))}
+      <div className="hub-btn-group">
+        <button className="hub-btn-new" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving…' : editingId ? '✓ Update' : '✓ Save'}
+        </button>
+        <button className="hub-btn-cancel" onClick={handleCancelEdit}>Cancel</button>
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="hub-panel-header">
         <h2 className="hub-panel-title">{icon} {title}</h2>
-        <button className="hub-btn-new" onClick={() => setShowForm(!showForm)}>
+        <button className="hub-btn-new" onClick={() => { if (showForm) handleCancelEdit(); else { setEditingId(null); setFormData({}); setShowForm(true); } }}>
           {showForm ? '✕ Cancel' : `+ New`}
         </button>
       </div>
 
-      {showForm && (
-        <div className="hub-form">
-          <h3 className="hub-form-title">New Entry</h3>
-          {fields.map(field => (
-            <div key={field.key} className="hub-form-row">
-              <label className="hub-form-label">{field.label}</label>
-              {field.type === 'textarea' ? (
-                <textarea
-                  className="hub-form-textarea"
-                  placeholder={field.placeholder || ''}
-                  value={formData[field.key] || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
-                />
-              ) : field.type === 'select' ? (
-                <select
-                  className="hub-form-select"
-                  value={formData[field.key] || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
-                >
-                  <option value="">Select…</option>
-                  {(field.options || statusOptions || []).map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  className="hub-form-input"
-                  type={field.type || 'text'}
-                  placeholder={field.placeholder || ''}
-                  value={formData[field.key] || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, [field.key]: e.target.value }))}
-                />
-              )}
-            </div>
-          ))}
-          <div className="hub-btn-group">
-            <button className="hub-btn-new" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : '✓ Save'}
-            </button>
-            <button className="hub-btn-cancel" onClick={() => setShowForm(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
+      {showForm && renderForm()}
 
       {data.length === 0 ? (
         <div className="hub-empty">
@@ -521,18 +654,28 @@ function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, sta
       ) : (
         <div className="hub-items">
           {data.map(item => (
-            <div key={item.id} className="hub-item">
+            <div key={item.id} className={`hub-item ${item.pinned ? 'hub-item--pinned' : ''}`}>
               <div className="hub-item-body">
-                <h3 className="hub-item-title">{item[fields[0]?.key] || 'Untitled'}</h3>
+                <h3 className="hub-item-title">
+                  {item.pinned && <span className="hub-pin-indicator">📌 </span>}
+                  {item[fields[0]?.key] || 'Untitled'}
+                </h3>
                 <div className="hub-item-meta">
                   {item.status && (
                     <span className={`hub-status hub-status--${item.status.toLowerCase().replace(/\s/g, '')}`}>
                       {item.status}
                     </span>
                   )}
+                  {item.priority && (
+                    <span className={`hub-priority hub-priority--${item.priority.toLowerCase()}`}>
+                      {item.priority}
+                    </span>
+                  )}
+                  {item.assignee && <span>→ {item.assignee}</span>}
                   {item.creatorName && <span>by {item.creatorName}</span>}
                   <span>{formatTime(item.createdAt)}</span>
                   {item.amount && <span>${Number(item.amount).toLocaleString()}</span>}
+                  {item.dueDate && <span>Due: {item.dueDate}</span>}
                 </div>
                 {item[fields[1]?.key] && fields[1]?.type === 'textarea' && (
                   <p style={{ margin: '8px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.5 }}>
@@ -541,6 +684,12 @@ function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, sta
                 )}
               </div>
               <div className="hub-item-actions">
+                {collectionName && (
+                  <button className={`hub-pin-btn ${item.pinned ? 'hub-pin-btn--active' : ''}`} onClick={() => handlePin(item)} title={item.pinned ? 'Unpin' : 'Pin'}>
+                    📌
+                  </button>
+                )}
+                <button className="hub-btn-edit" onClick={() => handleEdit(item)}>✏️</button>
                 <button className="hub-btn-delete" onClick={() => handleDelete(item)}>Delete</button>
               </div>
             </div>
@@ -553,6 +702,29 @@ function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, sta
 
 // ─── Specific Tab Wrappers ──────────────────────────────────
 
+function ActionItemsTab(props) {
+  return (
+    <CrudTab
+      {...props}
+      title="Action Items"
+      icon="✅"
+      emptyIcon="✅"
+      emptyText="No action items yet. Create one to track work."
+      collectionName="hub_action_items"
+      fields={[
+        { key: 'title', label: 'Task Title', placeholder: 'e.g. Finalize pitch deck for SBIR' },
+        { key: 'description', label: 'Details', type: 'textarea', placeholder: 'Requirements, context, links…' },
+        { key: 'assignee', label: 'Assignee', type: 'select', options: DEFAULT_TEAM.map(m => m.name) },
+        { key: 'priority', label: 'Priority', type: 'select', options: ['Low', 'Medium', 'High', 'Critical'] },
+        { key: 'dueDate', label: 'Due Date', type: 'date' },
+        { key: 'status', label: 'Status', type: 'select', options: ['Todo', 'In Progress', 'Blocked', 'Done'] },
+      ]}
+      saveFn={saveActionItem}
+      deleteFn={deleteActionItem}
+    />
+  );
+}
+
 function DecisionsTab(props) {
   return (
     <CrudTab
@@ -561,6 +733,7 @@ function DecisionsTab(props) {
       icon="📋"
       emptyIcon="📋"
       emptyText="No decisions logged yet."
+      collectionName="hub_decisions"
       fields={[
         { key: 'title', label: 'Decision Title', placeholder: 'e.g. API architecture choice' },
         { key: 'description', label: 'Details', type: 'textarea', placeholder: 'Context, options considered, reasoning…' },
@@ -580,6 +753,7 @@ function MeetingsTab(props) {
       icon="📅"
       emptyIcon="📅"
       emptyText="No meetings recorded yet."
+      collectionName="hub_meetings"
       fields={[
         { key: 'title', label: 'Meeting Title', placeholder: 'e.g. Weekly Standup — Apr 21' },
         { key: 'notes', label: 'Notes & Action Items', type: 'textarea', placeholder: 'Key discussion points, decisions, next steps…' },
@@ -600,6 +774,7 @@ function FundingTab(props) {
       icon="💰"
       emptyIcon="💰"
       emptyText="No funding entries yet."
+      collectionName="hub_funding"
       fields={[
         { key: 'source', label: 'Source / Program', placeholder: 'e.g. SBIR Phase I, Angel Investor' },
         { key: 'description', label: 'Details', type: 'textarea', placeholder: 'Application status, requirements, notes…' },
@@ -621,6 +796,7 @@ function PilotsTab(props) {
       icon="🧪"
       emptyIcon="🧪"
       emptyText="No pilot sites yet."
+      collectionName="hub_pilots"
       fields={[
         { key: 'organization', label: 'Organization', placeholder: 'e.g. Sunrise Community Inc.' },
         { key: 'description', label: 'Details', type: 'textarea', placeholder: 'Contact info, location, scope, population…' },
@@ -641,6 +817,7 @@ function ProductTab(props) {
       icon="🚀"
       emptyIcon="🚀"
       emptyText="No product updates yet."
+      collectionName="hub_product"
       fields={[
         { key: 'title', label: 'Title / Version', placeholder: 'e.g. v0.9 — Memory Hardening' },
         { key: 'description', label: 'Changelog / Features', type: 'textarea', placeholder: "What shipped, what changed, what's next..." },
@@ -661,22 +838,30 @@ function TeamTab({ data }) {
         <h2 className="hub-panel-title">👥 Founding Council</h2>
       </div>
 
-      <div className="hub-team-grid">
-        {data.map((member, i) => (
-          <div key={member.id || i} className="hub-team-card">
-            <div className="hub-team-avatar">
-              {member.photoURL ? (
-                <img src={member.photoURL} alt={member.name} />
-              ) : (
-                member.initials || member.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-              )}
+      {data.length === 0 ? (
+        <div className="hub-empty">
+          <span className="hub-empty-icon">👥</span>
+          <p className="hub-empty-text">No team members found.</p>
+        </div>
+      ) : (
+        <div className="hub-team-grid">
+          {data.map((member, i) => (
+            <div key={member.id || i} className="hub-team-card">
+              <div className="hub-team-avatar">
+                {member.photoURL ? (
+                  <img src={member.photoURL} alt={member.name} />
+                ) : (
+                  member.initials || member.name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+                )}
+              </div>
+              <h3 className="hub-team-name">{member.name}</h3>
+              <div className="hub-team-role">{member.role}</div>
+              {member.email && <span className="hub-team-email">{member.email}</span>}
             </div>
-            <h3 className="hub-team-name">{member.name}</h3>
-            <div className="hub-team-role">{member.role}</div>
-            {member.email && <span className="hub-team-email">{member.email}</span>}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </>
   );
 }
+

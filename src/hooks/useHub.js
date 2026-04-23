@@ -412,6 +412,70 @@ export async function deleteFoundersRoomPost(docId) {
   }
 }
 
+// ─── Action Items (Tasks / Todo) ────────────────────────────
+
+export async function saveActionItem(data, docId = null) {
+  if (!db) return null;
+  try {
+    if (docId) {
+      await updateDoc(doc(db, 'hub_action_items', docId), {
+        ...data,
+        updatedAt: serverTimestamp(),
+      });
+      return docId;
+    } else {
+      const ref = await addDoc(collection(db, 'hub_action_items'), {
+        ...data,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      return ref.id;
+    }
+  } catch (err) {
+    console.error('[hub] Error saving action item:', err);
+    throw err;
+  }
+}
+
+export async function getActionItems() {
+  if (!db) return [];
+  try {
+    const q = query(
+      collection(db, 'hub_action_items'),
+      orderBy('createdAt', 'desc')
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error('[hub] Error loading action items:', err);
+    return [];
+  }
+}
+
+export async function deleteActionItem(docId) {
+  if (!db) return;
+  try {
+    await deleteDoc(doc(db, 'hub_action_items', docId));
+  } catch (err) {
+    console.error('[hub] Error deleting action item:', err);
+  }
+}
+
+// ─── Pin / Bookmark ─────────────────────────────────────────
+
+export async function togglePin(collectionName, docId, currentlyPinned) {
+  if (!db) return;
+  try {
+    await updateDoc(doc(db, collectionName, docId), {
+      pinned: !currentlyPinned,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (err) {
+    console.error('[hub] Error toggling pin:', err);
+    throw err;
+  }
+}
+
 // ─── Utility ────────────────────────────────────────────────
 
 const FILE_TYPE_MAP = {
