@@ -19,6 +19,8 @@ import {
   subscribePilots, subscribeProduct, subscribeTeam, subscribeRoom,
   subscribeActionItems, subscribeAll, subscribeActivity, logActivity,
 } from '../hooks/useHub.js';
+import { usePushNotifications } from '../hooks/usePushNotifications.js';
+import NotifSettings from './NotifSettings.jsx';
 import './FounderHub.css';
 
 // ─── Error Boundary ─────────────────────────────────────────
@@ -81,16 +83,17 @@ function renderMentions(text) {
 }
 
 const TABS = [
-  { id: 'overview',   icon: '🏠', label: 'Overview' },
-  { id: 'room',       icon: '💬', label: 'Founders Room' },
-  { id: 'actions',    icon: '✅', label: 'Action Items' },
-  { id: 'documents',  icon: '📄', label: 'Documents' },
-  { id: 'decisions',  icon: '📋', label: 'Decisions' },
-  { id: 'meetings',   icon: '📅', label: 'Meetings' },
-  { id: 'funding',    icon: '💰', label: 'Funding' },
-  { id: 'pilots',     icon: '🧪', label: 'Pilots' },
-  { id: 'product',    icon: '🚀', label: 'Product' },
-  { id: 'team',       icon: '👥', label: 'Team' },
+  { id: 'overview',       icon: '🏠', label: 'Overview' },
+  { id: 'room',           icon: '💬', label: 'Founders Room' },
+  { id: 'actions',        icon: '✅', label: 'Action Items' },
+  { id: 'documents',      icon: '📄', label: 'Documents' },
+  { id: 'decisions',      icon: '📋', label: 'Decisions' },
+  { id: 'meetings',       icon: '📅', label: 'Meetings' },
+  { id: 'funding',        icon: '💰', label: 'Funding' },
+  { id: 'pilots',         icon: '🧪', label: 'Pilots' },
+  { id: 'product',        icon: '🚀', label: 'Product' },
+  { id: 'team',           icon: '👥', label: 'Team' },
+  { id: 'notifications',  icon: '🔔', label: 'Notifications' },
 ];
 
 // ─── Search Utility ─────────────────────────────────────────
@@ -134,6 +137,29 @@ export default function FounderHub({ userId, userName }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [gfmDonors, setGfmDonors] = useState([]);
 
+  // Toast helper (defined early so useEffects can reference it)
+  const showToast = useCallback((message, isError = false) => {
+    setToast({ message, isError });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  // Push notifications
+  const {
+    isGranted: notifGranted,
+    lastNotif,
+    notifyChatMessage,
+    notifyActionItem,
+    notifyDecision,
+    notifyMeeting,
+  } = usePushNotifications(userId);
+
+  // Show foreground FCM message as a Hub toast
+  useEffect(() => {
+    if (!lastNotif) return;
+    const n = lastNotif.notification || lastNotif.data || {};
+    showToast(`🔔 ${n.title || 'Hub update'}: ${n.body || ''}`);
+  }, [lastNotif, showToast]);
+
   // Data stores
   const [documents, setDocuments] = useState([]);
   const [decisions, setDecisions] = useState([]);
@@ -149,13 +175,9 @@ export default function FounderHub({ userId, userName }) {
   // Form visibility
   const [showForm, setShowForm] = useState(false);
 
-  const showToast = useCallback((message, isError = false) => {
-    setToast({ message, isError });
-    setTimeout(() => setToast(null), 3000);
-  }, []);
-
   // Real-time subscriptions — torn down on tab change / unmount
   useEffect(() => {
+
     setLoading(true);
 
     const setTeamSafe = (data) =>
@@ -232,15 +254,15 @@ export default function FounderHub({ userId, userName }) {
       case 'overview':
         return <OverviewTab counts={counts} actionItems={actionItems} decisions={decisions} meetings={meetings} product={product} activityLog={activityLog} gfmDonors={gfmDonors} setActionItems={setActionItems} setActiveTab={setActiveTab} showToast={showToast} />;
       case 'room':
-        return <FoundersRoomTab posts={filterBySearch(roomPosts, searchQuery)} setPosts={setRoomPosts} userId={userId} userName={userName} showToast={showToast} />;
+        return <FoundersRoomTab posts={filterBySearch(roomPosts, searchQuery)} setPosts={setRoomPosts} userId={userId} userName={userName} showToast={showToast} onNewMessage={notifyChatMessage} />;
       case 'actions':
-        return <ActionItemsTab data={sortWithPins(filterBySearch(actionItems, searchQuery))} setData={setActionItems} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
+        return <ActionItemsTab data={sortWithPins(filterBySearch(actionItems, searchQuery))} setData={setActionItems} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} onNewItem={notifyActionItem} />;
       case 'documents':
         return <DocumentsTab documents={sortWithPins(filterBySearch(documents, searchQuery))} setDocuments={setDocuments} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'decisions':
-        return <DecisionsTab data={sortWithPins(filterBySearch(decisions, searchQuery))} setData={setDecisions} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
+        return <DecisionsTab data={sortWithPins(filterBySearch(decisions, searchQuery))} setData={setDecisions} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} onNewDecision={notifyDecision} />;
       case 'meetings':
-        return <MeetingsTab data={sortWithPins(filterBySearch(meetings, searchQuery))} setData={setMeetings} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
+        return <MeetingsTab data={sortWithPins(filterBySearch(meetings, searchQuery))} setData={setMeetings} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} onNewMeeting={notifyMeeting} />;
       case 'funding':
         return <FundingTab data={sortWithPins(filterBySearch(funding, searchQuery))} setData={setFunding} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} gfmDonors={gfmDonors} setGfmDonors={setGfmDonors} />;
       case 'pilots':
@@ -249,6 +271,18 @@ export default function FounderHub({ userId, userName }) {
         return <ProductTab data={sortWithPins(filterBySearch(product, searchQuery))} setData={setProduct} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'team':
         return <TeamTab data={filterBySearch(team, searchQuery)} />;
+      case 'notifications':
+        return (
+          <>
+            <div className="hub-panel-header">
+              <h2 className="hub-panel-title">🔔 Notification Settings</h2>
+              <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>
+                {notifGranted ? '✅ Active' : 'Configure alerts'}
+              </span>
+            </div>
+            <NotifSettings userId={userId} />
+          </>
+        );
       default:
         return null;
     }

@@ -1,0 +1,299 @@
+/* NotifSettings.css — Notification settings panel for ROOMI Founder Hub */
+
+/* ─── Panel ───────────────────────────────────────────────── */
+.notif-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ─── Permission Banner ────────────────────────────────────── */
+.notif-permission-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  border: 1px solid;
+  transition: all 0.2s ease;
+}
+
+.notif-permission-banner--default {
+  background: linear-gradient(135deg, rgba(255,176,0,0.08), rgba(255,107,0,0.05));
+  border-color: rgba(255,176,0,0.25);
+}
+
+.notif-permission-banner--granted {
+  background: linear-gradient(135deg, rgba(52,199,89,0.08), rgba(48,209,88,0.05));
+  border-color: rgba(52,199,89,0.25);
+}
+
+.notif-permission-banner--denied {
+  background: rgba(255,59,48,0.06);
+  border-color: rgba(255,59,48,0.2);
+}
+
+.notif-permission-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.notif-permission-body {
+  flex: 1;
+}
+
+.notif-permission-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.9);
+  margin: 0 0 3px;
+}
+
+.notif-permission-desc {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.45);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.notif-enable-btn {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 10px 20px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+  background: linear-gradient(135deg, #ffb000, #ff8c00);
+  color: #000;
+  box-shadow: 0 4px 12px rgba(255,176,0,0.25);
+}
+.notif-enable-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(255,176,0,0.35);
+}
+
+.notif-test-btn {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(52,199,89,0.3);
+  background: rgba(52,199,89,0.1);
+  color: #34c759;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+.notif-test-btn:hover {
+  background: rgba(52,199,89,0.18);
+  border-color: rgba(52,199,89,0.5);
+}
+
+/* ─── Section Heading ──────────────────────────────────────── */
+.notif-section-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: rgba(255,255,255,0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 10px;
+}
+
+/* ─── Toggle Row ───────────────────────────────────────────── */
+.notif-toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.notif-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  transition: background 0.15s;
+}
+.notif-toggle-row:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.notif-toggle-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notif-toggle-icon {
+  font-size: 1.1rem;
+  width: 28px;
+  text-align: center;
+}
+
+.notif-toggle-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.8);
+}
+
+.notif-toggle-sub {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.35);
+  margin-top: 1px;
+}
+
+/* ─── Toggle Switch ────────────────────────────────────────── */
+.notif-switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.notif-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.notif-switch-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.1);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.notif-switch input:checked + .notif-switch-track {
+  background: #ffb000;
+}
+
+.notif-switch-track::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  top: 3px;
+  left: 3px;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.notif-switch input:checked + .notif-switch-track::before {
+  transform: translateX(18px);
+  background: #fff;
+}
+
+/* Disabled state */
+.notif-switch--disabled .notif-switch-track {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ─── Quiet Hours ──────────────────────────────────────────── */
+.notif-quiet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.notif-quiet-label {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-quiet-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notif-quiet-select {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.8);
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.notif-quiet-select:focus {
+  border-color: rgba(255,176,0,0.4);
+}
+
+.notif-quiet-to {
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.35);
+}
+
+/* ─── Token Info ───────────────────────────────────────────── */
+.notif-token-info {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.68rem;
+  color: rgba(255,255,255,0.2);
+  word-break: break-all;
+}
+
+/* ─── Mobile ───────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .notif-permission-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .notif-enable-btn,
+  .notif-test-btn {
+    width: 100%;
+    text-align: center;
+    min-height: 44px;
+  }
+
+  .notif-quiet-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .notif-toggle-row {
+    padding: 10px 12px;
+  }
+}
