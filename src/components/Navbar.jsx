@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import './Navbar.css';
 
-export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onResetDemo, onLogout, hasActiveDemo, isAuthenticated, isCaregiver, userName }) {
+export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onResetDemo, onLogout, hasActiveDemo, isAuthenticated, isCaregiver, isFounder, userName }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Caregivers only see Anchor View + Universe; residents see everything
+  // Hub is ONLY visible to founders — completely hidden from all other users
   const navItems = isCaregiver
     ? [
         { id: 'anchor', label: '🏠 Anchor View' },
@@ -15,7 +16,7 @@ export default function Navbar({ currentView, onNavigate, onOpenOnboarding, onRe
         { id: 'universe', label: 'Universe' },
         { id: 'chat', label: 'Try ROOMI' },
         { id: 'anchor', label: 'Anchor View' },
-        { id: 'hub', label: '🔒 Hub' },
+        ...(isFounder ? [{ id: 'hub', label: '🔒 Hub' }] : []),
       ];
 
   return (

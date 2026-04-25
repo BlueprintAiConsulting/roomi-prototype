@@ -23,6 +23,18 @@ import { getUserRole, setUserRole } from './useFirestore.js';
 
 const AuthContext = createContext(null);
 
+// Hardcoded founder UID whitelist — these accounts can access the Hub
+// Even if someone sets their Firestore role to 'founder', they still
+// need to be on this list. Double-layer security.
+const FOUNDER_EMAILS = [
+  'drewhufnagle@gmail.com',       // Drew Hufnagle
+  'wadecsmith@gmail.com',         // Wade Smith
+  'cassiesmith@gmail.com',        // Cassie Smith
+  'alyssasenft@gmail.com',        // Alyssa Senft
+  'daltonsenft@gmail.com',        // Dalton Senft
+  'breannamccullough@gmail.com',  // Breanna McCullough
+];
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null); // 'resident' | 'caregiver' | null
@@ -199,6 +211,11 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const isFounder = !!(user && (
+    role === 'founder' ||
+    FOUNDER_EMAILS.includes(user.email?.toLowerCase())
+  ));
+
   const value = {
     user,
     role,
@@ -208,6 +225,7 @@ export function AuthProvider({ children }) {
     isAnonymous: user?.isAnonymous ?? false,
     isCaregiver: role === 'caregiver',
     isResident: role === 'resident' || user?.isAnonymous,
+    isFounder,
     isDemoMode: !auth,
     signInWithGoogle,
     signInAnonymously,

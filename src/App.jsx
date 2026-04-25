@@ -13,7 +13,7 @@ import RawChatTest from './components/RawChatTest.jsx';
 import './App.css';
 
 function AppContent() {
-  const { user, role, loading, isAuthenticated, isCaregiver, isDemoMode, logout } = useAuth();
+  const { user, role, loading, isAuthenticated, isCaregiver, isFounder, isDemoMode, logout } = useAuth();
   const [currentView, setCurrentView] = useState('landing');
   const [displayedView, setDisplayedView] = useState('landing');
   const [transitioning, setTransitioning] = useState(false);
@@ -132,6 +132,16 @@ function AppContent() {
       case 'universe':
         return <Universe />;
       case 'hub':
+        // Founder-only gate — non-founders silently redirected
+        if (!isFounder) {
+          return (
+            <Landing
+              onNavigate={handleNavigate}
+              onOpenOnboarding={handleOpenOnboarding}
+              onTesterChat={handleTesterChat}
+            />
+          );
+        }
         return <FounderHub userId={user?.uid} userName={user?.displayName || userData?.preferredName} />;
       case 'landing':
       default:
@@ -160,6 +170,7 @@ function AppContent() {
         hasActiveDemo={!!userData}
         isAuthenticated={isAuthenticated}
         isCaregiver={isCaregiver}
+        isFounder={isFounder}
         userName={user?.displayName || userData?.preferredName}
       />
 

@@ -17,8 +17,8 @@ import {
 } from '../firebase.js';
 
 // ─── Roles ──────────────────────────────────────────────────
-// role: 'resident' | 'caregiver'
-// Caregivers have a `residents` array of resident UIDs they oversee
+// role: 'resident' | 'caregiver' | 'founder'
+// Founders have access to the Founder Hub — hidden from all other users
 
 export async function getUserRole(uid) {
   if (!db) return null;
