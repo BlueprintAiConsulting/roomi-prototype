@@ -7,3 +7,4 @@ smoke_test.mjs
 server/smoke_test.mjs
 server/gen_voice_samples.mjs
 /tmp/
+serviceAccountKey.json

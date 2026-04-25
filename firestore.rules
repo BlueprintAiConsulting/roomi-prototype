@@ -30,12 +30,15 @@ service cloud.firestore {
     }
 
     // True if the user has the 'founder' role in Firestore
+    // True if the user has the 'founder' (or 'admin') role in Firestore.
     // This is the server-side gate for ALL hub_* collections.
     // Mirrors the client-side FOUNDER_EMAILS list in useAuth.jsx.
+    // ⚠️  Requires run-once: scripts/setFounderRoles.js (seeds roles for the 6 council members)
     function isFounder() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/userRoles/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/userRoles/$(request.auth.uid)).data.role == 'founder';
+        (get(/databases/$(database)/documents/userRoles/$(request.auth.uid)).data.role == 'founder' ||
+         get(/databases/$(database)/documents/userRoles/$(request.auth.uid)).data.role == 'admin');
     }
 
     // ─── userRoles ──────────────────────────────────────────────
