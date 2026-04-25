@@ -29,13 +29,22 @@ service cloud.firestore {
         request.auth.uid in get(/databases/$(database)/documents/userRoles/$(residentUid)).data.get('caregiverUids', []);
     }
 
+    // True if the user has the 'founder' role in Firestore
+    // This is the server-side gate for ALL hub_* collections.
+    // Mirrors the client-side FOUNDER_EMAILS list in useAuth.jsx.
+    function isFounder() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/userRoles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/userRoles/$(request.auth.uid)).data.role == 'founder';
+    }
+
     // ─── userRoles ──────────────────────────────────────────────
     // Users can read/write their own role doc.
     // Caregivers can read resident role docs they are linked to.
     match /userRoles/{uid} {
       allow read: if isOwner(uid) || isCaregiver();
       allow create: if isOwner(uid) && isAuthenticated();
-      // Only allow updating own doc; prevent self-escalation to caregiver via resident path
+      // Only allow updating own doc; prevent self-escalation via resident path
       allow update: if isOwner(uid) && isAuthenticated();
       allow delete: if false; // never delete roles
     }
@@ -43,15 +52,12 @@ service cloud.firestore {
     // ─── users (profiles) ───────────────────────────────────────
     // Residents can only read/write their own profile.
     // Caregivers can read profiles of their residents.
-    // Allow any auth (incl. anonymous) to write own profile — full auth required for sensitive ops
     match /users/{uid} {
       allow read: if isOwner(uid) || isCaregiverFor(uid);
       allow write: if isOwner(uid) && request.auth != null;
     }
 
     // ─── conversations ──────────────────────────────────────────
-    // Residents can read/write their own conversations.
-    // Caregivers can read their residents' conversations.
     match /conversations/{docId} {
       allow read: if request.auth != null &&
         (resource.data.userId == request.auth.uid ||
@@ -64,8 +70,6 @@ service cloud.firestore {
     }
 
     // ─── anchorSummaries ────────────────────────────────────────
-    // Only authenticated (non-anonymous) residents can write their own.
-    // Caregivers can read their residents' summaries.
     match /anchorSummaries/{docId} {
       allow read: if request.auth != null &&
         (resource.data.userId == request.auth.uid ||
@@ -78,8 +82,6 @@ service cloud.firestore {
     }
 
     // ─── dailySummaries (cross-session memory) ────────────────
-    // Residents can read/write their own daily summaries.
-    // Caregivers can read their residents' summaries.
     match /dailySummaries/{docId} {
       allow read: if request.auth != null &&
         (resource.data.userId == request.auth.uid ||
@@ -92,7 +94,6 @@ service cloud.firestore {
     }
 
     // ─── weeklySummaries (compressed memory) ─────────────────
-    // Same access pattern as dailySummaries
     match /weeklySummaries/{docId} {
       allow read: if request.auth != null &&
         (resource.data.userId == request.auth.uid ||
@@ -110,41 +111,38 @@ service cloud.firestore {
       allow read, write: if isOwner(uid) && isAuthenticated();
     }
 
+    // ─── notifPrefs ─────────────────────────────────────────────
+    // Notification preferences — per-user, owner-only.
+    // Used by usePushNotifications.js for quiet hours + event toggles.
+    match /notifPrefs/{uid} {
+      allow read, write: if isOwner(uid) && isAuthenticated();
+    }
+
     // ─── analytics (Phase 1) ────────────────────────────────────
-    // Write-only from client — no userId field (hashed), so no owner check possible.
-    // Read only via Firebase Admin SDK (console / backend). Never expose to client.
     match /analytics/{docId} {
       allow create: if request.auth != null;
       allow read, update, delete: if false;
     }
 
     // ─── feedback (Phase 1) ─────────────────────────────────────
-    // Write-only from client. Reads reserved for admin review.
     match /feedback/{docId} {
       allow create: if request.auth != null;
       allow read, update, delete: if false;
     }
 
     // ─── safetyEvents (Phase 1) ─────────────────────────────────
-    // Write-only from client. Critical for safety monitoring.
-    // Read only via admin. No client read ever.
     match /safetyEvents/{docId} {
       allow create: if request.auth != null;
       allow read, update, delete: if false;
     }
 
     // ─── systemPrompts (Phase 2B) ───────────────────────────────
-    // Read-only for authenticated users (to load active prompt).
-    // Write-only via Firebase Admin SDK (console or backend).
     match /systemPrompts/{docId} {
       allow read: if request.auth != null;
       allow create, update, delete: if false;
     }
 
     // ─── inviteCodes (Phase 2D) ─────────────────────────────────
-    // Read: any authenticated user (needed during signup to validate code)
-    // Update: authenticated user can mark a code as used during signup
-    // Create/Delete: admin SDK only (for generating codes)
     match /inviteCodes/{docId} {
       allow read: if request.auth != null;
       allow update: if request.auth != null &&
@@ -153,67 +151,79 @@ service cloud.firestore {
       allow create, delete: if false;
     }
 
-    // ─── Founder Hub collections ─────────────────────────────────
-    // Any authenticated user can read/write hub data.
-    // In production, scope this to allowlisted emails.
+    // ═══════════════════════════════════════════════════════════════
+    // Founder Hub Collections — isFounder() required for all access
+    // Non-founders get DENIED at the Firestore level (defense-in-depth
+    // on top of the client-side RBAC in useAuth.jsx / Navbar.jsx).
+    // ═══════════════════════════════════════════════════════════════
+
     match /hub_documents/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+      allow read: if isFounder();
+      allow create: if isFounder();
+      allow update, delete: if isFounder();
     }
 
     match /hub_decisions/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+      allow read: if isFounder();
+      allow create: if isFounder();
+      allow update, delete: if isFounder();
     }
 
     match /hub_meetings/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+      allow read: if isFounder();
+      allow create: if isFounder();
+      allow update, delete: if isFounder();
     }
 
     match /hub_funding/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+      allow read: if isFounder();
+      allow create: if isFounder();
+      allow update, delete: if isFounder();
     }
 
     match /hub_pilots/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+      allow read: if isFounder();
+      allow create: if isFounder();
+      allow update, delete: if isFounder();
     }
 
     match /hub_product/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+      allow read: if isFounder();
+      allow create: if isFounder();
+      allow update, delete: if isFounder();
     }
 
     match /hub_team/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+      allow read: if isFounder();
+      allow create: if isFounder();
+      allow update, delete: if isFounder();
     }
 
     match /hub_founders_room/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+      allow read: if isFounder();
+      allow create: if isFounder();
+      allow update, delete: if isFounder();
     }
 
     match /hub_action_items/{docId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update, delete: if request.auth != null;
+      allow read: if isFounder();
+      allow create: if isFounder();
+      allow update, delete: if isFounder();
+    }
+
+    // ─── hub_gfm_donors ─────────────────────────────────────────
+    // GoFundMe donor records — founder-only read/write.
+    // This was previously missing from rules → causing permission errors.
+    match /hub_gfm_donors/{docId} {
+      allow read: if isFounder();
+      allow create: if isFounder();
+      allow update, delete: if isFounder();
     }
 
     match /hub_activity/{docId} {
-      // Append-only audit log: authenticated founders can read + create only
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      // Append-only audit log: founders can read + create only
+      allow read: if isFounder();
+      allow create: if isFounder();
       allow update, delete: if false;
     }
 
