@@ -53,7 +53,18 @@ export function AuthProvider({ children }) {
       if (firebaseUser && !firebaseUser.isAnonymous) {
         // Load role from Firestore
         const roleDoc = await getUserRole(firebaseUser.uid);
-        setRole(roleDoc?.role || null);
+        let currentRole = roleDoc?.role || null;
+
+        // Auto-promote founding council members on login
+        // This bootstraps the Firestore role so isFounder() server rules work
+        const email = firebaseUser.email?.toLowerCase();
+        if (email && FOUNDER_EMAILS.includes(email) && currentRole !== 'founder') {
+          console.log(`[auth] Auto-promoting founder: ${email}`);
+          await setUserRole(firebaseUser.uid, 'founder', { email });
+          currentRole = 'founder';
+        }
+
+        setRole(currentRole);
       } else {
         setRole(null);
       }
