@@ -92,6 +92,7 @@ const TABS = [
   { id: 'funding',        icon: '💰', label: 'Funding' },
   { id: 'pilots',         icon: '🧪', label: 'Pilots' },
   { id: 'product',        icon: '🚀', label: 'Product' },
+  { id: 'prototype',      icon: '🦊', label: 'Prototype' },
   { id: 'team',           icon: '👥', label: 'Team' },
   { id: 'notifications',  icon: '🔔', label: 'Notifications' },
 ];
@@ -269,6 +270,8 @@ export default function FounderHub({ userId, userName }) {
         return <PilotsTab data={sortWithPins(filterBySearch(pilots, searchQuery))} setData={setPilots} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
       case 'product':
         return <ProductTab data={sortWithPins(filterBySearch(product, searchQuery))} setData={setProduct} userId={userId} userName={userName} showForm={showForm} setShowForm={setShowForm} showToast={showToast} onActivityLog={(e) => logActivity({ ...e, actor: userName })} />;
+      case 'prototype':
+        return <PrototypeVersionTab />;
       case 'team':
         return <TeamTab data={filterBySearch(team, searchQuery)} />;
       case 'notifications':
@@ -1493,6 +1496,162 @@ function TeamTab({ data }) {
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+// ─── Prototype Version Tab ──────────────────────────────────
+// Internal dashboard for founders: tracks the live "little fox" chatbot
+// config, version history, and system prompt used by real testers.
+
+const PROTOTYPE_VERSIONS = [
+  {
+    version: 'v0.3.0',
+    date: '2026-04-25',
+    status: 'active',
+    model: 'gemini-2.5-flash',
+    temperature: 0.45,
+    maxTokens: 512,
+    topP: 0.85,
+    changes: [
+      'Founder-only Hub access with auto-role promotion',
+      'FCM push notification system with VAPID key',
+      'Firestore security rules hardened for all hub_* collections',
+      'Mobile-first responsive hardening (dvh, touch targets, iOS zoom fix)',
+      'Error code diagnostic system (ROOMI-API-xxx, ROOMI-FB-xxx)',
+    ],
+  },
+  {
+    version: 'v0.2.0',
+    date: '2026-04-22',
+    status: 'previous',
+    model: 'gemini-2.5-flash',
+    temperature: 0.45,
+    maxTokens: 512,
+    topP: 0.85,
+    changes: [
+      'Founders Room real-time chat with channels',
+      'Action items with assignees and priority levels',
+      'Product tab with live GitHub commit feed',
+      'GFM donor tracking card',
+      'Activity audit log',
+    ],
+  },
+  {
+    version: 'v0.1.0',
+    date: '2026-04-17',
+    status: 'previous',
+    model: 'gemini-2.0-flash',
+    temperature: 0.45,
+    maxTokens: 512,
+    topP: 0.85,
+    changes: [
+      'Initial prototype launch with Gemini direct SDK',
+      'System prompt for IDD companion persona',
+      '3-layer safety system (client filter → API safety → response validation)',
+      'Onboarding flow with scenario selection',
+      'Anonymous and Google auth support',
+    ],
+  },
+];
+
+const CURRENT_SYSTEM_PROMPT = `You are ROOMI, a warm and caring AI companion for people with intellectual and developmental disabilities.
+Be conversational, warm, simple, and supportive. Use short sentences. Use emojis occasionally. Never be clinical or robotic.
+This is a live smoke test — respond naturally as ROOMI would in production.`;
+
+function PrototypeVersionTab() {
+  const current = PROTOTYPE_VERSIONS[0];
+
+  return (
+    <>
+      <div className="hub-panel-header">
+        <h2 className="hub-panel-title">🦊 Prototype Versioning</h2>
+        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>
+          Live "Little Fox" chatbot config
+        </span>
+      </div>
+
+      {/* ─── Current Version Hero ─── */}
+      <div className="hub-proto-hero">
+        <div className="hub-proto-hero-left">
+          <div className="hub-proto-version-badge">
+            <span className="hub-proto-fox">🦊</span>
+            <span className="hub-proto-ver">{current.version}</span>
+            <span className="hub-proto-status hub-proto-status--active">ACTIVE</span>
+          </div>
+          <div className="hub-proto-date">Released {new Date(current.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+        </div>
+        <div className="hub-proto-hero-right">
+          <div className="hub-proto-config-row">
+            <span className="hub-proto-config-label">Model</span>
+            <span className="hub-proto-config-value">{current.model}</span>
+          </div>
+          <div className="hub-proto-config-row">
+            <span className="hub-proto-config-label">Temperature</span>
+            <span className="hub-proto-config-value">{current.temperature}</span>
+          </div>
+          <div className="hub-proto-config-row">
+            <span className="hub-proto-config-label">Max Tokens</span>
+            <span className="hub-proto-config-value">{current.maxTokens}</span>
+          </div>
+          <div className="hub-proto-config-row">
+            <span className="hub-proto-config-label">Top-P</span>
+            <span className="hub-proto-config-value">{current.topP}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── System Prompt ─── */}
+      <div className="hub-proto-section">
+        <h3 className="hub-proto-section-title">💬 Active System Prompt</h3>
+        <pre className="hub-proto-prompt">{CURRENT_SYSTEM_PROMPT}</pre>
+      </div>
+
+      {/* ─── Version History ─── */}
+      <div className="hub-proto-section">
+        <h3 className="hub-proto-section-title">📋 Version History</h3>
+        <div className="hub-proto-timeline">
+          {PROTOTYPE_VERSIONS.map((v, i) => (
+            <div key={v.version} className={`hub-proto-timeline-item ${i === 0 ? 'hub-proto-timeline-item--current' : ''}`}>
+              <div className="hub-proto-timeline-dot" />
+              <div className="hub-proto-timeline-content">
+                <div className="hub-proto-timeline-header">
+                  <span className="hub-proto-timeline-ver">{v.version}</span>
+                  {i === 0 && <span className="hub-proto-status hub-proto-status--active">CURRENT</span>}
+                  <span className="hub-proto-timeline-date">{new Date(v.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                </div>
+                <div className="hub-proto-timeline-model">{v.model} · temp {v.temperature} · {v.maxTokens} tokens</div>
+                <ul className="hub-proto-timeline-changes">
+                  {v.changes.map((c, j) => <li key={j}>{c}</li>)}
+                </ul>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Test Access Info ─── */}
+      <div className="hub-proto-section">
+        <h3 className="hub-proto-section-title">🔗 Test Access</h3>
+        <div className="hub-proto-access">
+          <div className="hub-proto-access-row">
+            <span className="hub-proto-config-label">Entry Point</span>
+            <span className="hub-proto-config-value">Landing page → 🦊 footer icon</span>
+          </div>
+          <div className="hub-proto-access-row">
+            <span className="hub-proto-config-label">Component</span>
+            <span className="hub-proto-config-value" style={{ fontFamily: 'monospace' }}>RawChatTest.jsx</span>
+          </div>
+          <div className="hub-proto-access-row">
+            <span className="hub-proto-config-label">Auth Required</span>
+            <span className="hub-proto-config-value">Any authenticated user</span>
+          </div>
+          <div className="hub-proto-access-row">
+            <span className="hub-proto-config-label">API</span>
+            <span className="hub-proto-config-value">Direct Gemini SDK (no proxy)</span>
+          </div>
+        </div>
+      </div>
     </>
   );
 }

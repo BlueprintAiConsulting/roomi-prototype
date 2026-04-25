@@ -2500,6 +2500,245 @@
   background: linear-gradient(135deg, #ffb000, #ff8c00);
 }
 
+/* ─── Prototype Versioning Tab ─────────────────────────────── */
+
+.hub-proto-hero {
+  display: flex;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, rgba(255,179,0,0.08), rgba(255,140,0,0.04));
+  border: 1px solid rgba(255,179,0,0.15);
+  border-radius: 14px;
+  margin-bottom: 1.5rem;
+}
+
+.hub-proto-hero-left {
+  flex: 1;
+}
+
+.hub-proto-hero-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 180px;
+}
+
+.hub-proto-version-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+
+.hub-proto-fox {
+  font-size: 1.6rem;
+}
+
+.hub-proto-ver {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffb300;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.hub-proto-status {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hub-proto-status--active {
+  background: rgba(76,175,80,0.2);
+  color: #66bb6a;
+  border: 1px solid rgba(76,175,80,0.25);
+}
+
+.hub-proto-date {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.4);
+}
+
+.hub-proto-config-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.3rem 0;
+}
+
+.hub-proto-config-label {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.hub-proto-config-value {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.85);
+  font-weight: 600;
+}
+
+.hub-proto-section {
+  margin-bottom: 1.5rem;
+}
+
+.hub-proto-section-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.hub-proto-prompt {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: rgba(255,255,255,0.65);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+/* Timeline */
+.hub-proto-timeline {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.hub-proto-timeline::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255,255,255,0.08);
+}
+
+.hub-proto-timeline-item {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+
+.hub-proto-timeline-dot {
+  position: absolute;
+  left: -1.5rem;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 2px solid rgba(255,255,255,0.1);
+  z-index: 1;
+}
+
+.hub-proto-timeline-item--current .hub-proto-timeline-dot {
+  background: #ffb300;
+  border-color: rgba(255,179,0,0.4);
+  box-shadow: 0 0 8px rgba(255,179,0,0.3);
+}
+
+.hub-proto-timeline-content {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+
+.hub-proto-timeline-item--current .hub-proto-timeline-content {
+  border-color: rgba(255,179,0,0.15);
+  background: rgba(255,179,0,0.04);
+}
+
+.hub-proto-timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.hub-proto-timeline-ver {
+  font-weight: 800;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.85);
+}
+
+.hub-proto-timeline-date {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.3);
+  margin-left: auto;
+}
+
+.hub-proto-timeline-model {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 0.5rem;
+}
+
+.hub-proto-timeline-changes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.hub-proto-timeline-changes li {
+  position: relative;
+  padding-left: 1rem;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.6;
+}
+
+.hub-proto-timeline-changes li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: rgba(255,179,0,0.5);
+  font-weight: 700;
+}
+
+/* Access info */
+.hub-proto-access {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+
+.hub-proto-access-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.hub-proto-access-row:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 768px) {
+  .hub-proto-hero {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .hub-proto-hero-right {
+    min-width: unset;
+  }
+}
+
 /* ─── Mobile Chat ───────────────────────────────────────────── */
 
 @media (max-width: 768px) {
