@@ -48,8 +48,8 @@
 
 .hub-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
-  overflow-x: auto;
   padding: 6px;
   background: rgba(255, 255, 255, 0.04);
   border-radius: 16px;
@@ -762,6 +762,8 @@
 
   /* ─ Tab Bar: icon-only on mobile with scroll fade ─ */
   .hub-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
     margin-bottom: 14px;
     padding: 4px;
     gap: 2px;
