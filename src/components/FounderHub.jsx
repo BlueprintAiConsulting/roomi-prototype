@@ -91,7 +91,7 @@ const TABS = [
   { id: 'meetings',       icon: '📅', label: 'Meetings' },
   { id: 'funding',        icon: '💰', label: 'Funding' },
   { id: 'pilots',         icon: '🧪', label: 'Pilots' },
-  { id: 'product',        icon: '🚀', label: 'Product' },
+  { id: 'product',        icon: '🚀', label: 'Roadmap' },
   { id: 'prototype',      icon: '🦊', label: 'Prototype' },
   { id: 'team',           icon: '👥', label: 'Team' },
   { id: 'notifications',  icon: '🔔', label: 'Notifications' },
@@ -675,7 +675,7 @@ function DocumentsTab({ documents, setDocuments, userId, userName, showToast }) 
 
 // ─── Generic CRUD Tab Builder ───────────────────────────────
 
-function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, statusOptions, saveFn, deleteFn, collectionName, userId, userName, showForm, setShowForm, showToast, onActivityLog }) {
+function CrudTab({ title, subtitle, icon, emptyIcon, emptyText, data, setData, fields, statusOptions, saveFn, deleteFn, collectionName, userId, userName, showForm, setShowForm, showToast, onActivityLog }) {
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -802,7 +802,10 @@ function CrudTab({ title, icon, emptyIcon, emptyText, data, setData, fields, sta
   return (
     <>
       <div className="hub-panel-header">
-        <h2 className="hub-panel-title">{icon} {title}</h2>
+        <div>
+          <h2 className="hub-panel-title">{icon} {title}</h2>
+          {subtitle && <span className="hub-panel-subtitle">{subtitle}</span>}
+        </div>
         <button className="hub-btn-new" onClick={() => { if (showForm) handleCancelEdit(); else { setEditingId(null); setFormData({}); setShowForm(true); } }}>
           {showForm ? '✕ Cancel' : `+ New`}
         </button>
@@ -1417,7 +1420,8 @@ function ProductTab(props) {
     <div>
       <CrudTab
         {...props}
-        title="Product"
+        title="Product Roadmap"
+        subtitle="Platform releases, features shipped & planned across the full ROOMI app"
         icon="🚀"
         emptyIcon="🚀"
         emptyText="No product updates yet."
@@ -1565,10 +1569,10 @@ function PrototypeVersionTab() {
   return (
     <>
       <div className="hub-panel-header">
-        <h2 className="hub-panel-title">🦊 Prototype Versioning</h2>
-        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)' }}>
-          Live "Little Fox" chatbot config
-        </span>
+        <div>
+          <h2 className="hub-panel-title">🦊 Prototype Versioning</h2>
+          <span className="hub-panel-subtitle">Live AI chatbot config & version history — what real testers are talking to right now</span>
+        </div>
       </div>
 
       {/* ─── Current Version Hero ─── */}
