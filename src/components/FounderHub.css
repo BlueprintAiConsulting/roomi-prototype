@@ -5,6 +5,7 @@
 .hub {
   min-height: 100vh;
   padding: 100px 24px 60px;
+  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
   max-width: 1200px;
   margin: 0 auto;
   overflow-x: hidden;
@@ -750,10 +751,11 @@
   /* ─ Layout ─ */
   .hub {
     padding: 76px 12px 32px;
+    padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
   }
 
   .hub-header {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
   }
 
   .hub-header-icon {
@@ -777,7 +779,11 @@
     padding: 4px;
     gap: 2px;
     border-radius: 12px;
-    position: relative;
+    position: sticky;
+    top: 60px;
+    z-index: 20;
+    background: rgba(10, 8, 22, 0.92);
+    -webkit-overflow-scrolling: touch;
     /* Scroll fade hint */
     -webkit-mask-image: linear-gradient(to right, #000 85%, transparent 100%);
     mask-image: linear-gradient(to right, #000 85%, transparent 100%);
@@ -1088,7 +1094,12 @@
 
 @media (max-width: 480px) {
   .hub {
-    padding: 72px 8px 24px;
+    padding: 68px 8px 24px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .hub-tabs {
+    top: 52px;
   }
 
   .hub-panel {
@@ -2750,6 +2761,22 @@
   }
 }
 
+@media (max-width: 480px) {
+  .hub-proto-hero {
+    padding: 14px;
+  }
+  .hub-proto-hero h2 {
+    font-size: 1rem;
+  }
+  .hub-proto-hero p {
+    font-size: 0.78rem;
+  }
+  .hub-proto-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+}
+
 /* ─── Mobile Chat ───────────────────────────────────────────── */
 
 @media (max-width: 768px) {
@@ -3348,6 +3375,7 @@
   .transcript-intelligence-header .hub-btn-new {
     width: 100%;
     text-align: center;
+    min-height: 44px;
   }
 
   .transcript-action-item {
@@ -3371,5 +3399,55 @@
 
   .transcript-analysis-filename {
     max-width: 160px;
+  }
+
+  .transcript-dropzone {
+    padding: 20px 14px;
+  }
+
+  .transcript-analyze-btn {
+    min-height: 48px;
+    font-size: 0.85rem;
+  }
+
+  .transcript-intelligence-title {
+    font-size: 0.95rem;
+  }
+}
+
+/* ─── Tiny phones (390px and below) ─ Transcript ─────────── */
+
+@media (max-width: 390px) {
+  .transcript-analysis-card {
+    border-radius: 10px;
+  }
+
+  .transcript-analysis-header {
+    padding: 12px;
+  }
+
+  .transcript-analysis-body {
+    padding: 0 12px 12px;
+  }
+
+  .transcript-section-title {
+    font-size: 0.78rem;
+  }
+
+  .transcript-section-text {
+    font-size: 0.78rem;
+  }
+
+  .transcript-action-task {
+    font-size: 0.78rem;
+  }
+
+  .transcript-list li {
+    font-size: 0.78rem;
+  }
+
+  .transcript-preview-text {
+    max-height: 80px;
+    font-size: 0.7rem;
   }
 }
