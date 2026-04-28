@@ -15,6 +15,7 @@ import {
   togglePin, toggleRoomReaction,
   saveGFMDonor, deleteGFMDonor, subscribeGFMDonors,
   getFileTypeInfo, formatFileSize,
+  saveTranscriptAnalysis, deleteTranscriptAnalysis, subscribeTranscriptAnalyses,
   subscribeDocuments, subscribeDecisions, subscribeMeetings, subscribeFunding,
   subscribePilots, subscribeProduct, subscribeTeam, subscribeRoom,
   subscribeActionItems, subscribeAll, subscribeActivity, logActivity,
@@ -1202,23 +1203,429 @@ function DecisionsTab(props) {
 }
 
 function MeetingsTab(props) {
+  const [transcriptFile, setTranscriptFile] = useState(null);
+  const [transcriptText, setTranscriptText] = useState('');
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyses, setAnalyses] = useState([]);
+  const [expandedAnalysis, setExpandedAnalysis] = useState(null);
+  const [showUploadPanel, setShowUploadPanel] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Subscribe to saved analyses
+  useEffect(() => {
+    const unsub = subscribeTranscriptAnalyses(setAnalyses);
+    return unsub;
+  }, []);
+
+  // ── Parse .docx via JSZip-free approach (raw ArrayBuffer → XML text extraction) ──
+  const parseDocx = async (file) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+
+    // Find PK signature (ZIP format) and locate document.xml
+    // .docx is a ZIP file containing word/document.xml
+    // We'll use the browser's built-in decompression via Response + Blob
+    try {
+      const blob = new Blob([bytes], { type: 'application/zip' });
+      // Use JSZip-like extraction via the native DecompressionStream if available
+      // Fallback: extract XML text from raw bytes using regex on the binary data
+      const text = await extractDocxText(arrayBuffer);
+      return text;
+    } catch {
+      throw new Error('Failed to parse .docx file. Please try uploading a .txt file instead.');
+    }
+  };
+
+  // Extract text from docx by finding XML content in the ZIP
+  const extractDocxText = async (arrayBuffer) => {
+    // .docx files are ZIP archives. We need to find word/document.xml inside.
+    const bytes = new Uint8Array(arrayBuffer);
+    const textDecoder = new TextDecoder('utf-8', { fatal: false });
+    const rawStr = textDecoder.decode(bytes);
+
+    // Look for XML content between <w:t> tags (Word text runs)
+    const textMatches = rawStr.match(/<w:t[^>]*>([^<]*)<\/w:t>/g);
+    if (textMatches && textMatches.length > 0) {
+      const extracted = textMatches
+        .map(m => m.replace(/<w:t[^>]*>/, '').replace(/<\/w:t>/, ''))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (extracted.length > 20) return extracted;
+    }
+
+    // Fallback: try to find any readable text content
+    const paragraphMatches = rawStr.match(/<w:p[^>]*>[\s\S]*?<\/w:p>/g);
+    if (paragraphMatches) {
+      const lines = paragraphMatches.map(p => {
+        const texts = p.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [];
+        return texts.map(t => t.replace(/<w:t[^>]*>/, '').replace(/<\/w:t>/, '')).join('');
+      }).filter(l => l.trim());
+      if (lines.length > 0) return lines.join('\n');
+    }
+
+    throw new Error('Could not extract text from .docx');
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['txt', 'docx'].includes(ext)) {
+      props.showToast('Only .txt and .docx files are supported', true);
+      return;
+    }
+
+    setTranscriptFile(file);
+
+    try {
+      if (ext === 'txt') {
+        const text = await file.text();
+        setTranscriptText(text);
+      } else {
+        const text = await parseDocx(file);
+        setTranscriptText(text);
+      }
+    } catch (err) {
+      props.showToast(err.message || 'Failed to read file', true);
+      setTranscriptFile(null);
+      setTranscriptText('');
+    }
+  };
+
+  const runAnalysis = async () => {
+    if (!transcriptText.trim()) {
+      props.showToast('No transcript text to analyze', true);
+      return;
+    }
+
+    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!GEMINI_API_KEY) {
+      props.showToast('Gemini API key not configured', true);
+      return;
+    }
+
+    setAnalyzing(true);
+    try {
+      const { GoogleGenAI } = await import('@google/genai');
+      const genai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+
+      const prompt = `You are an executive meeting analyst for a startup founding council. Analyze the following meeting transcript and return a JSON object with these exact keys:
+
+{
+  "summary": "A concise 2-3 sentence TL;DR of the entire meeting",
+  "actionItems": [{"task": "...", "owner": "Person name or 'Unassigned'", "priority": "High/Medium/Low"}],
+  "keyDecisions": ["Decision 1", "Decision 2"],
+  "openQuestions": ["Question 1", "Question 2"],
+  "risks": ["Risk 1", "Risk 2"],
+  "sentiment": {"overall": "Positive/Neutral/Negative/Mixed", "confidence": "High/Medium/Low", "note": "Brief explanation"},
+  "speakerBreakdown": [{"name": "Person", "topicsCovered": "Brief summary of their contributions"}],
+  "nextAgenda": ["Suggested agenda item 1", "Suggested agenda item 2"]
+}
+
+Rules:
+- Return ONLY valid JSON, no markdown fences, no explanation text
+- If a section has no data, use an empty array []
+- For speaker breakdown, identify speakers from the transcript text patterns
+- Keep everything concise and actionable
+- Action items should be specific and measurable
+
+TRANSCRIPT:
+${transcriptText.slice(0, 30000)}`;
+
+      const response = await genai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+      });
+
+      const raw = response.text || '';
+      // Strip markdown code fences if present
+      const cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+
+      let analysis;
+      try {
+        analysis = JSON.parse(cleaned);
+      } catch {
+        // Try to extract JSON from the response
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          analysis = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('AI returned invalid format');
+        }
+      }
+
+      // Save to Firestore
+      const savedData = {
+        fileName: transcriptFile?.name || 'Pasted transcript',
+        transcriptPreview: transcriptText.slice(0, 500),
+        analysis,
+        analyzedBy: props.userId,
+        analyzerName: props.userName || 'Founder',
+      };
+
+      const id = await saveTranscriptAnalysis(savedData);
+      props.showToast('Transcript analyzed & saved ✨');
+      props.onActivityLog?.({ action: 'added', section: 'Meetings', title: `Analyzed: ${savedData.fileName}` });
+
+      // Reset form
+      setTranscriptFile(null);
+      setTranscriptText('');
+      setShowUploadPanel(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      // Auto-expand the new analysis
+      setExpandedAnalysis(id);
+
+    } catch (err) {
+      console.error('[hub] Transcript analysis failed:', err);
+      props.showToast('Analysis failed — check API key or try again', true);
+    }
+    setAnalyzing(false);
+  };
+
+  const handleDeleteAnalysis = async (item) => {
+    if (!confirm(`Delete analysis for "${item.fileName}"?`)) return;
+    await deleteTranscriptAnalysis(item.id);
+    props.showToast('Analysis deleted');
+    props.onActivityLog?.({ action: 'deleted', section: 'Meetings', title: `Analysis: ${item.fileName}` });
+  };
+
+  const formatAnalysisTime = (ts) => {
+    if (!ts) return '';
+    const date = ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  };
+
+  const renderAnalysisCard = (item) => {
+    const a = item.analysis || {};
+    const isExpanded = expandedAnalysis === item.id;
+
+    return (
+      <div key={item.id} className="transcript-analysis-card">
+        <div className="transcript-analysis-header" onClick={() => setExpandedAnalysis(isExpanded ? null : item.id)}>
+          <div className="transcript-analysis-header-left">
+            <span className="transcript-analysis-icon">🧠</span>
+            <div>
+              <h4 className="transcript-analysis-filename">{item.fileName}</h4>
+              <span className="transcript-analysis-meta">
+                by {item.analyzerName} · {formatAnalysisTime(item.createdAt)}
+                {a.sentiment?.overall && (
+                  <span className={`transcript-sentiment transcript-sentiment--${(a.sentiment.overall || '').toLowerCase()}`}>
+                    {a.sentiment.overall === 'Positive' ? '😊' : a.sentiment.overall === 'Negative' ? '😟' : a.sentiment.overall === 'Mixed' ? '🤔' : '😐'} {a.sentiment.overall}
+                  </span>
+                )}
+              </span>
+            </div>
+          </div>
+          <div className="transcript-analysis-header-right">
+            <button className="hub-btn-delete" onClick={(e) => { e.stopPropagation(); handleDeleteAnalysis(item); }}>Delete</button>
+            <span className="transcript-expand-icon">{isExpanded ? '▲' : '▼'}</span>
+          </div>
+        </div>
+
+        {isExpanded && (
+          <div className="transcript-analysis-body">
+            {/* TL;DR */}
+            {a.summary && (
+              <div className="transcript-section">
+                <h5 className="transcript-section-title">📝 TL;DR</h5>
+                <p className="transcript-section-text">{a.summary}</p>
+              </div>
+            )}
+
+            {/* Action Items */}
+            {a.actionItems?.length > 0 && (
+              <div className="transcript-section">
+                <h5 className="transcript-section-title">✅ Action Items ({a.actionItems.length})</h5>
+                <div className="transcript-action-items">
+                  {a.actionItems.map((ai, i) => (
+                    <div key={i} className="transcript-action-item">
+                      <span className={`transcript-priority transcript-priority--${(ai.priority || 'medium').toLowerCase()}`}>
+                        {ai.priority || 'Medium'}
+                      </span>
+                      <span className="transcript-action-task">{ai.task}</span>
+                      <span className="transcript-action-owner">→ {ai.owner || 'Unassigned'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Key Decisions */}
+            {a.keyDecisions?.length > 0 && (
+              <div className="transcript-section">
+                <h5 className="transcript-section-title">⚖️ Key Decisions</h5>
+                <ul className="transcript-list">
+                  {a.keyDecisions.map((d, i) => <li key={i}>{d}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {/* Open Questions */}
+            {a.openQuestions?.length > 0 && (
+              <div className="transcript-section">
+                <h5 className="transcript-section-title">❓ Open Questions</h5>
+                <ul className="transcript-list">
+                  {a.openQuestions.map((q, i) => <li key={i}>{q}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {/* Risks */}
+            {a.risks?.length > 0 && (
+              <div className="transcript-section">
+                <h5 className="transcript-section-title">⚠️ Risks Identified</h5>
+                <ul className="transcript-list transcript-list--risks">
+                  {a.risks.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {/* Sentiment */}
+            {a.sentiment?.note && (
+              <div className="transcript-section">
+                <h5 className="transcript-section-title">💬 Sentiment Analysis</h5>
+                <p className="transcript-section-text">{a.sentiment.note}</p>
+              </div>
+            )}
+
+            {/* Speaker Breakdown */}
+            {a.speakerBreakdown?.length > 0 && (
+              <div className="transcript-section">
+                <h5 className="transcript-section-title">🎙️ Speaker Breakdown</h5>
+                <div className="transcript-speakers">
+                  {a.speakerBreakdown.map((s, i) => (
+                    <div key={i} className="transcript-speaker">
+                      <span className="transcript-speaker-name">{s.name}</span>
+                      <span className="transcript-speaker-topics">{s.topicsCovered}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Next Meeting Agenda */}
+            {a.nextAgenda?.length > 0 && (
+              <div className="transcript-section">
+                <h5 className="transcript-section-title">📋 Suggested Next Agenda</h5>
+                <ol className="transcript-list transcript-list--numbered">
+                  {a.nextAgenda.map((item, i) => <li key={i}>{item}</li>)}
+                </ol>
+              </div>
+            )}
+
+            {/* Transcript Preview */}
+            {item.transcriptPreview && (
+              <div className="transcript-section transcript-section--preview">
+                <h5 className="transcript-section-title">📄 Transcript Preview</h5>
+                <pre className="transcript-preview-text">{item.transcriptPreview}…</pre>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <CrudTab
-      {...props}
-      title="Meetings"
-      icon="📅"
-      emptyIcon="📅"
-      emptyText="No meetings recorded yet."
-      collectionName="hub_meetings"
-      fields={[
-        { key: 'title', label: 'Meeting Title', placeholder: 'e.g. Weekly Standup — Apr 21' },
-        { key: 'notes', label: 'Notes & Action Items', type: 'textarea', placeholder: 'Key discussion points, decisions, next steps…' },
-        { key: 'date', label: 'Date', type: 'date' },
-        { key: 'attendees', label: 'Attendees', placeholder: 'Wade, Drew, Cassie…' },
-      ]}
-      saveFn={saveMeeting}
-      deleteFn={deleteMeeting}
-    />
+    <>
+      {/* Standard meeting entries via CrudTab */}
+      <CrudTab
+        {...props}
+        title="Meetings"
+        subtitle="Log meetings, upload transcripts & get AI analysis"
+        icon="📅"
+        emptyIcon="📅"
+        emptyText="No meetings recorded yet."
+        collectionName="hub_meetings"
+        fields={[
+          { key: 'title', label: 'Meeting Title', placeholder: 'e.g. Weekly Standup — Apr 21' },
+          { key: 'notes', label: 'Notes & Action Items', type: 'textarea', placeholder: 'Key discussion points, decisions, next steps…' },
+          { key: 'date', label: 'Date', type: 'date' },
+          { key: 'attendees', label: 'Attendees', placeholder: 'Wade, Drew, Cassie…' },
+        ]}
+        saveFn={saveMeeting}
+        deleteFn={deleteMeeting}
+      />
+
+      {/* ─── Transcript Intelligence Section ─── */}
+      <div className="transcript-intelligence-section">
+        <div className="transcript-intelligence-header">
+          <div>
+            <h3 className="transcript-intelligence-title">🧠 Transcript Intelligence</h3>
+            <span className="hub-panel-subtitle">Upload meeting transcripts (.txt or .docx) for AI-powered analysis</span>
+          </div>
+          <button
+            className="hub-btn-new"
+            onClick={() => { setShowUploadPanel(!showUploadPanel); setTranscriptFile(null); setTranscriptText(''); }}
+          >
+            {showUploadPanel ? '✕ Cancel' : '+ Analyze Transcript'}
+          </button>
+        </div>
+
+        {showUploadPanel && (
+          <div className="transcript-upload-panel">
+            <div className="transcript-dropzone" onClick={() => fileInputRef.current?.click()}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.docx"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+              {transcriptFile ? (
+                <div className="transcript-file-selected">
+                  <span className="transcript-file-icon">📄</span>
+                  <span className="transcript-file-name">{transcriptFile.name}</span>
+                  <span className="transcript-file-size">({(transcriptFile.size / 1024).toFixed(1)} KB)</span>
+                </div>
+              ) : (
+                <div className="transcript-dropzone-empty">
+                  <span className="transcript-dropzone-icon">📂</span>
+                  <span className="transcript-dropzone-text">Click to upload .txt or .docx transcript</span>
+                  <span className="transcript-dropzone-hint">Max recommended: 30,000 characters</span>
+                </div>
+              )}
+            </div>
+
+            {transcriptText && (
+              <div className="transcript-preview-box">
+                <span className="transcript-preview-label">Preview ({transcriptText.length.toLocaleString()} characters)</span>
+                <pre className="transcript-preview-content">{transcriptText.slice(0, 600)}{transcriptText.length > 600 ? '…' : ''}</pre>
+              </div>
+            )}
+
+            <button
+              className="transcript-analyze-btn"
+              onClick={runAnalysis}
+              disabled={analyzing || !transcriptText.trim()}
+            >
+              {analyzing ? (
+                <>
+                  <span className="transcript-spinner" />
+                  Analyzing with Gemini…
+                </>
+              ) : (
+                '🧠 Run AI Analysis'
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Saved Analyses */}
+        {analyses.length > 0 ? (
+          <div className="transcript-analyses-list">
+            {analyses.map(renderAnalysisCard)}
+          </div>
+        ) : !showUploadPanel && (
+          <div className="hub-empty" style={{ marginTop: 12 }}>
+            <span className="hub-empty-icon">🧠</span>
+            <p className="hub-empty-text">No transcript analyses yet. Upload a meeting transcript to get started.</p>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

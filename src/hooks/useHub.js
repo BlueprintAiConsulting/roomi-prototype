@@ -185,6 +185,33 @@ export async function deleteMeeting(docId) {
   }
 }
 
+// ─── Transcript Analyses ────────────────────────────────────
+
+export async function saveTranscriptAnalysis(data) {
+  if (!db) return null;
+  try {
+    const ref = await addDoc(collection(db, 'hub_transcript_analyses'), {
+      ...data,
+      createdAt: serverTimestamp(),
+    });
+    return ref.id;
+  } catch (err) {
+    console.error('[hub] Error saving transcript analysis:', err);
+    throw err;
+  }
+}
+
+export async function deleteTranscriptAnalysis(docId) {
+  if (!db) return;
+  try {
+    await deleteDoc(doc(db, 'hub_transcript_analyses', docId));
+  } catch (err) {
+    console.error('[hub] Error deleting transcript analysis:', err);
+  }
+}
+
+export const subscribeTranscriptAnalyses = (cb) => makeSubscriber('hub_transcript_analyses', 'createdAt', cb);
+
 // ─── Funding ────────────────────────────────────────────────
 
 export async function saveFundingEntry(data, docId = null) {

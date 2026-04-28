@@ -2900,3 +2900,476 @@
     padding: 8px 10px;
   }
 }
+
+/* ─── Transcript Intelligence ────────────────────────────── */
+
+.transcript-intelligence-section {
+  margin-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 24px;
+}
+
+.transcript-intelligence-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.transcript-intelligence-title {
+  font-family: 'Nunito', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 2px;
+}
+
+/* ─── Upload Panel ──────────────────────────────────────── */
+
+.transcript-upload-panel {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.transcript-dropzone {
+  border: 2px dashed rgba(255, 176, 0, 0.25);
+  border-radius: 10px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(255, 176, 0, 0.03);
+}
+
+.transcript-dropzone:hover {
+  border-color: rgba(255, 176, 0, 0.5);
+  background: rgba(255, 176, 0, 0.06);
+}
+
+.transcript-dropzone-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.transcript-dropzone-icon {
+  font-size: 2rem;
+}
+
+.transcript-dropzone-text {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+.transcript-dropzone-hint {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.transcript-file-selected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.transcript-file-icon {
+  font-size: 1.5rem;
+}
+
+.transcript-file-name {
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 700;
+}
+
+.transcript-file-size {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ─── Transcript Preview ────────────────────────────────── */
+
+.transcript-preview-box {
+  margin-top: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.transcript-preview-label {
+  font-size: 0.72rem;
+  color: rgba(255, 176, 0, 0.6);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.transcript-preview-content {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.5;
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 150px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+/* ─── Analyze Button ────────────────────────────────────── */
+
+.transcript-analyze-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px 20px;
+  border: none;
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Nunito', sans-serif;
+}
+
+.transcript-analyze-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+}
+
+.transcript-analyze-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.transcript-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: transcript-spin 0.6s linear infinite;
+}
+
+@keyframes transcript-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Analysis Cards ────────────────────────────────────── */
+
+.transcript-analyses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.transcript-analysis-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.transcript-analysis-card:hover {
+  border-color: rgba(124, 58, 237, 0.25);
+}
+
+.transcript-analysis-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.transcript-analysis-header:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.transcript-analysis-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.transcript-analysis-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.transcript-analysis-filename {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transcript-analysis-meta {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.transcript-analysis-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.transcript-expand-icon {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* ─── Sentiment Badges ──────────────────────────────────── */
+
+.transcript-sentiment {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.transcript-sentiment--positive {
+  background: rgba(52, 199, 89, 0.15);
+  color: #34c759;
+}
+
+.transcript-sentiment--negative {
+  background: rgba(255, 59, 48, 0.15);
+  color: #ff3b30;
+}
+
+.transcript-sentiment--mixed {
+  background: rgba(255, 149, 0, 0.15);
+  color: #ff9500;
+}
+
+.transcript-sentiment--neutral {
+  background: rgba(142, 142, 147, 0.15);
+  color: #8e8e93;
+}
+
+/* ─── Analysis Body / Sections ──────────────────────────── */
+
+.transcript-analysis-body {
+  padding: 0 16px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.transcript-section {
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.transcript-section:last-child {
+  border-bottom: none;
+}
+
+.transcript-section--preview {
+  opacity: 0.6;
+}
+
+.transcript-section-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 8px;
+  font-family: 'Nunito', sans-serif;
+}
+
+.transcript-section-text {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* ─── Action Items ──────────────────────────────────────── */
+
+.transcript-action-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.transcript-action-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.transcript-priority {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.transcript-priority--high {
+  background: rgba(255, 59, 48, 0.15);
+  color: #ff3b30;
+}
+
+.transcript-priority--medium {
+  background: rgba(255, 149, 0, 0.15);
+  color: #ff9500;
+}
+
+.transcript-priority--low {
+  background: rgba(142, 142, 147, 0.15);
+  color: #8e8e93;
+}
+
+.transcript-action-task {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  flex: 1;
+  min-width: 0;
+}
+
+.transcript-action-owner {
+  font-size: 0.75rem;
+  color: rgba(255, 176, 0, 0.6);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* ─── Lists ─────────────────────────────────────────────── */
+
+.transcript-list {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.transcript-list li {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.55);
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.transcript-list--risks li {
+  color: rgba(255, 149, 0, 0.7);
+}
+
+.transcript-list--numbered {
+  list-style: decimal;
+}
+
+/* ─── Speaker Breakdown ─────────────────────────────────── */
+
+.transcript-speakers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.transcript-speaker {
+  display: flex;
+  gap: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.transcript-speaker-name {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(124, 58, 237, 0.8);
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.transcript-speaker-topics {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.5;
+}
+
+/* ─── Transcript Preview in Card ────────────────────────── */
+
+.transcript-preview-text {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 120px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+  border-radius: 6px;
+}
+
+/* ─── Mobile Adjustments for Transcript ─────────────────── */
+
+@media (max-width: 600px) {
+  .transcript-intelligence-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .transcript-intelligence-header .hub-btn-new {
+    width: 100%;
+    text-align: center;
+  }
+
+  .transcript-action-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .transcript-action-owner {
+    margin-left: 0;
+  }
+
+  .transcript-speaker {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .transcript-speaker-name {
+    min-width: auto;
+  }
+
+  .transcript-analysis-filename {
+    max-width: 160px;
+  }
+}
