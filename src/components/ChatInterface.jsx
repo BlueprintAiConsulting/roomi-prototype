@@ -1225,6 +1225,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
                 onExit={() => setVoiceMode(false)}
                 userName={fullName}
                 userData={userData}
+                systemPrompt={ACTIVE_SYSTEM_PROMPT}
               />
             </div>
           )}
