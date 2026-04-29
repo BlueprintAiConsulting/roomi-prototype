@@ -218,7 +218,8 @@ export default function ChatInterface({ userData, userId }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (showSchedule) setShowSchedule(false);
+        if (voiceMode) setVoiceMode(false);
+        else if (showSchedule) setShowSchedule(false);
         else if (sidebarOpen) setSidebarOpen(false);
         else if (showNotifPrompt) setShowNotifPrompt(false);
       }
@@ -1217,7 +1218,7 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
             ))}
           </div>
 
-          {/* Voice Mode — PAUSED (re-enable when voice server is production-ready)
+          {/* Voice Mode */}
           {voiceMode && (
             <div className="voice-mode-overlay">
               <VoiceMode
@@ -1227,7 +1228,6 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
               />
             </div>
           )}
-          */}
 
           {/* Schedule Overlay */}
           {showSchedule && (
@@ -1410,6 +1410,19 @@ ${scenarioContext[activeScenario] || 'Have a natural, supportive conversation.'}
                 onKeyDown={e => e.key === 'Enter' && handleSendDemo()}
                 disabled={isOffline}
               />
+              <button
+                className={`chat-voice-btn ${voiceMode ? 'chat-voice-btn--active' : ''}`}
+                onClick={() => setVoiceMode(!voiceMode)}
+                aria-label={voiceMode ? "Exit voice mode" : "Start voice mode"}
+                title={voiceMode ? "Exit voice mode" : "Talk to ROOMI"}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+              </button>
               <button
                 className="chat-send-btn"
                 onClick={() => handleSendDemo()}
