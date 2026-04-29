@@ -1917,9 +1917,26 @@ function TeamTab({ data }) {
 
 const PROTOTYPE_VERSIONS = [
   {
+    version: 'v0.4.0',
+    date: '2026-04-29',
+    status: 'active',
+    model: 'gemini-2.5-flash',
+    temperature: 0.45,
+    maxTokens: 512,
+    topP: 0.85,
+    changes: [
+      'AnchorView wired to live Firestore — no more fake data',
+      'Real-time onSnapshot listener for caregiver dashboard',
+      'Real weekly mood history from anchorSummaries collection',
+      'Firestore-native analytics dashboard (no server required)',
+      'Mood self-rating extraction from evening conversations',
+      'Fixed caregiver role detection bug',
+    ],
+  },
+  {
     version: 'v0.3.0',
     date: '2026-04-25',
-    status: 'active',
+    status: 'previous',
     model: 'gemini-2.5-flash',
     temperature: 0.45,
     maxTokens: 512,
@@ -1959,34 +1976,81 @@ const PROTOTYPE_VERSIONS = [
     changes: [
       'Initial prototype launch with Gemini direct SDK',
       'System prompt for IDD companion persona',
-      '3-layer safety system (client filter → API safety → response validation)',
+      '3-layer safety system (client filter \u2192 API safety \u2192 response validation)',
       'Onboarding flow with scenario selection',
       'Anonymous and Google auth support',
     ],
   },
 ];
 
+// ─── Release Notes — detailed founder-facing updates ────────
+const RELEASE_NOTES = [
+  {
+    id: 'v040-anchor-live',
+    version: 'v0.4.0',
+    date: '2026-04-29',
+    title: 'AnchorView Goes Live',
+    tagline: 'The caregiver dashboard now shows real data from real conversations — no more placeholders.',
+    author: 'Drew',
+    category: 'Core Feature',
+    items: [
+      {
+        label: 'Caregiver Role Fix',
+        before: 'Caregivers were treated as residents and shown their own empty data.',
+        after: 'Caregivers now correctly resolve to their linked resident via the isCaregiver prop.',
+      },
+      {
+        label: 'Real Weekly Mood Chart',
+        before: 'Hardcoded placeholder values (3, 3, 3, 3, 3, 3) every time.',
+        after: 'Pulls actual mood scores from the last 7 days of saved Firestore anchorSummaries.',
+      },
+      {
+        label: 'Live Updates',
+        before: 'One-shot data load — caregivers had to refresh the page to see changes.',
+        after: 'onSnapshot real-time listener on today\'s summary. Dashboard updates automatically as the resident chats with ROOMI.',
+      },
+      {
+        label: 'Mood Self-Rating',
+        before: 'Mood score was a rough guess based on which scenarios were used.',
+        after: 'If the resident says "I\'d rate today a 4" during evening wind-down, that rating is now extracted and used directly.',
+      },
+      {
+        label: 'Analytics Dashboard',
+        before: 'REST API calls to a server that doesn\'t exist — always returned null.',
+        after: 'Direct Firestore reads from analytics + safetyEvents collections. 7-day engagement chart and safety interception log work now.',
+      },
+      {
+        label: 'Safety Event Logging',
+        before: 'No date field on safetyEvents docs — analytics couldn\'t query by time range.',
+        after: 'Date field added. Query uses timestamp-based ordering with client-side cutoff filter.',
+      },
+    ],
+    impact: 'AnchorView was the last major piece using static sample data. As of this release, everything the caregiver sees comes from real Firestore conversations and summaries.',
+  },
+];
+
 const CURRENT_SYSTEM_PROMPT = `You are ROOMI, a warm and caring AI companion for people with intellectual and developmental disabilities.
 Be conversational, warm, simple, and supportive. Use short sentences. Use emojis occasionally. Never be clinical or robotic.
-This is a live smoke test — respond naturally as ROOMI would in production.`;
+This is a live smoke test \u2014 respond naturally as ROOMI would in production.`;
 
 function PrototypeVersionTab() {
   const current = PROTOTYPE_VERSIONS[0];
+  const [expandedNote, setExpandedNote] = useState(RELEASE_NOTES[0]?.id || null);
 
   return (
     <>
       <div className="hub-panel-header">
         <div>
-          <h2 className="hub-panel-title">🦊 Prototype Versioning</h2>
-          <span className="hub-panel-subtitle">Live AI chatbot config & version history — what real testers are talking to right now</span>
+          <h2 className="hub-panel-title">\uD83E\uDD8A Prototype Versioning</h2>
+          <span className="hub-panel-subtitle">Live AI chatbot config & version history \u2014 what real testers are talking to right now</span>
         </div>
       </div>
 
-      {/* ─── Current Version Hero ─── */}
+      {/* \u2500\u2500\u2500 Current Version Hero \u2500\u2500\u2500 */}
       <div className="hub-proto-hero">
         <div className="hub-proto-hero-left">
           <div className="hub-proto-version-badge">
-            <span className="hub-proto-fox">🦊</span>
+            <span className="hub-proto-fox">\uD83E\uDD8A</span>
             <span className="hub-proto-ver">{current.version}</span>
             <span className="hub-proto-status hub-proto-status--active">ACTIVE</span>
           </div>
@@ -2012,15 +2076,75 @@ function PrototypeVersionTab() {
         </div>
       </div>
 
-      {/* ─── System Prompt ─── */}
+      {/* \u2500\u2500\u2500 Release Notes (Detailed Founder Updates) \u2500\u2500\u2500 */}
       <div className="hub-proto-section">
-        <h3 className="hub-proto-section-title">💬 Active System Prompt</h3>
+        <h3 className="hub-proto-section-title">\uD83D\uDCE3 Release Notes</h3>
+        <span className="hub-panel-subtitle" style={{ marginBottom: '16px', display: 'block' }}>Detailed write-ups for major releases \u2014 share with the team or read up on what shipped</span>
+
+        <div className="hub-release-notes">
+          {RELEASE_NOTES.map(note => {
+            const isOpen = expandedNote === note.id;
+            return (
+              <div key={note.id} className={`hub-release-card ${isOpen ? 'hub-release-card--open' : ''}`}>
+                <div className="hub-release-card-header" onClick={() => setExpandedNote(isOpen ? null : note.id)}>
+                  <div className="hub-release-card-header-left">
+                    <span className="hub-release-ver">{note.version}</span>
+                    <span className="hub-release-category">{note.category}</span>
+                    <h4 className="hub-release-title">{note.title}</h4>
+                  </div>
+                  <div className="hub-release-card-header-right">
+                    <span className="hub-release-date">{new Date(note.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                    <span className="hub-release-author">by {note.author}</span>
+                    <span className="hub-release-toggle">{isOpen ? '\u25B2' : '\u25BC'}</span>
+                  </div>
+                </div>
+
+                {isOpen && (
+                  <div className="hub-release-card-body">
+                    <p className="hub-release-tagline">{note.tagline}</p>
+
+                    <div className="hub-release-items">
+                      {note.items.map((item, i) => (
+                        <div key={i} className="hub-release-item">
+                          <div className="hub-release-item-label">{item.label}</div>
+                          <div className="hub-release-item-row">
+                            <div className="hub-release-item-cell hub-release-item-cell--before">
+                              <span className="hub-release-cell-tag">\u2718 Before</span>
+                              <span className="hub-release-cell-text">{item.before}</span>
+                            </div>
+                            <div className="hub-release-arrow">\u2192</div>
+                            <div className="hub-release-item-cell hub-release-item-cell--after">
+                              <span className="hub-release-cell-tag">\u2714 After</span>
+                              <span className="hub-release-cell-text">{item.after}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {note.impact && (
+                      <div className="hub-release-impact">
+                        <span className="hub-release-impact-icon">\uD83C\uDFAF</span>
+                        <p><strong>Bottom Line:</strong> {note.impact}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* \u2500\u2500\u2500 System Prompt \u2500\u2500\u2500 */}
+      <div className="hub-proto-section">
+        <h3 className="hub-proto-section-title">\uD83D\uDCAC Active System Prompt</h3>
         <pre className="hub-proto-prompt">{CURRENT_SYSTEM_PROMPT}</pre>
       </div>
 
-      {/* ─── Version History ─── */}
+      {/* \u2500\u2500\u2500 Version History \u2500\u2500\u2500 */}
       <div className="hub-proto-section">
-        <h3 className="hub-proto-section-title">📋 Version History</h3>
+        <h3 className="hub-proto-section-title">\uD83D\uDCCB Version History</h3>
         <div className="hub-proto-timeline">
           {PROTOTYPE_VERSIONS.map((v, i) => (
             <div key={v.version} className={`hub-proto-timeline-item ${i === 0 ? 'hub-proto-timeline-item--current' : ''}`}>
@@ -2031,7 +2155,7 @@ function PrototypeVersionTab() {
                   {i === 0 && <span className="hub-proto-status hub-proto-status--active">CURRENT</span>}
                   <span className="hub-proto-timeline-date">{new Date(v.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                 </div>
-                <div className="hub-proto-timeline-model">{v.model} · temp {v.temperature} · {v.maxTokens} tokens</div>
+                <div className="hub-proto-timeline-model">{v.model} \u00B7 temp {v.temperature} \u00B7 {v.maxTokens} tokens</div>
                 <ul className="hub-proto-timeline-changes">
                   {v.changes.map((c, j) => <li key={j}>{c}</li>)}
                 </ul>
@@ -2041,13 +2165,13 @@ function PrototypeVersionTab() {
         </div>
       </div>
 
-      {/* ─── Test Access Info ─── */}
+      {/* \u2500\u2500\u2500 Test Access Info \u2500\u2500\u2500 */}
       <div className="hub-proto-section">
-        <h3 className="hub-proto-section-title">🔗 Test Access</h3>
+        <h3 className="hub-proto-section-title">\uD83D\uDD17 Test Access</h3>
         <div className="hub-proto-access">
           <div className="hub-proto-access-row">
             <span className="hub-proto-config-label">Entry Point</span>
-            <span className="hub-proto-config-value">Landing page → 🦊 footer icon</span>
+            <span className="hub-proto-config-value">Landing page \u2192 \uD83E\uDD8A footer icon</span>
           </div>
           <div className="hub-proto-access-row">
             <span className="hub-proto-config-label">Component</span>
