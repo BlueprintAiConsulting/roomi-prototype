@@ -371,6 +371,7 @@ export async function logSafetyEvent(uid, data) {
       layer:     data.layer     ?? 1,       // 1 | 2 | 3
       category:  data.category  || 'unknown',
       inputLen:  data.inputLen  ?? 0,
+      date:      new Date().toISOString().split('T')[0],
       timestamp: serverTimestamp(),
     });
   } catch (err) {
@@ -425,6 +426,93 @@ export async function listSystemPromptVersions() {
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (err) {
     console.error('Error listing system prompts:', err);
+    return [];
+  }
+}
+
+// ─── Anchor Weekly History ───────────────────────────────────
+// Returns up to 7 days of anchor summaries for the weekly mood chart
+
+export async function getWeeklyAnchorHistory(uid, days = 7) {
+  if (!db || !uid) return [];
+  try {
+    const q = query(
+      collection(db, 'anchorSummaries'),
+      where('userId', '==', uid),
+      orderBy('date', 'desc'),
+      limit(days)
+    );
+    const snap = await getDocs(q);
+    // Return oldest-first for chart rendering
+    return snap.docs.map(d => ({ id: d.id, ...d.data() })).reverse();
+  } catch (err) {
+    console.error('Error loading anchor history:', err);
+    return [];
+  }
+}
+
+// ─── Firestore-native Analytics ─────────────────────────────
+// Reads directly from the analytics collection (no REST server needed)
+// Returns array of { date, turns } for the last N days
+
+export async function getFirestoreEngagement(uid, days = 7) {
+  if (!db || !uid) return [];
+  try {
+    const hashedId = await hashUserId(uid);
+    // Build date range
+    const dates = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+
+    const q = query(
+      collection(db, 'analytics'),
+      where('userId', '==', hashedId),
+      where('date', 'in', dates.slice(-10)) // Firestore 'in' max 10
+    );
+    const snap = await getDocs(q);
+
+    // Aggregate turns per day
+    const byDay = {};
+    dates.forEach(d => { byDay[d] = 0; });
+    snap.docs.forEach(doc => {
+      const { date } = doc.data();
+      if (byDay[date] !== undefined) byDay[date]++;
+    });
+
+    return dates.map(date => ({ date, turns: byDay[date] }));
+  } catch (err) {
+    console.warn('[analytics] Firestore read failed:', err.message);
+    return [];
+  }
+}
+
+// ─── Firestore-native Safety Events ──────────────────────────
+
+export async function getFirestoreSafetyEvents(uid, days = 7) {
+  if (!db || !uid) return [];
+  try {
+    const hashedId = await hashUserId(uid);
+    // Query recent safety events — limit-based since older docs may lack 'date' field
+    const q = query(
+      collection(db, 'safetyEvents'),
+      where('userId', '==', hashedId),
+      orderBy('timestamp', 'desc'),
+      limit(30)
+    );
+    const snap = await getDocs(q);
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(evt => {
+        if (!evt.timestamp) return true; // include if no timestamp
+        const ts = evt.timestamp.toMillis ? evt.timestamp.toMillis() : 0;
+        return ts >= cutoff;
+      });
+  } catch (err) {
+    console.warn('[safety] Firestore read failed:', err.message);
     return [];
   }
 }

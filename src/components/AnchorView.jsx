@@ -1,163 +1,101 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { anchorSummary as fallbackData } from '../data/sampleData.js';
-import { getAnchorSummary, saveAnchorSummary, getConversations, getUserProfile, getCaregiverResidents, hashUserId } from '../hooks/useFirestore.js';
-import { useAuth } from '../hooks/useAuth.jsx';
+import {
+  getAnchorSummary, saveAnchorSummary,
+  getConversations, getUserProfile, getCaregiverResidents,
+  getWeeklyAnchorHistory, getFirestoreEngagement, getFirestoreSafetyEvents,
+} from '../hooks/useFirestore.js';
+import { onSnapshot, doc, db } from '../firebase.js';
 import './AnchorView.css';
 
-const MOOD_LABELS = {
-  morning: 'Morning',
-  midday: 'Midday',
-  evening: 'Evening',
-};
+const MOOD_LABELS = { morning: 'Morning', midday: 'Midday', evening: 'Evening' };
+const MOOD_EMOJI  = { calm: '🟢', anxious: '🟡', content: '🟢', stressed: '🟠' };
 
-const MOOD_EMOJI = {
-  calm: '🟢',
-  anxious: '🟡',
-  content: '🟢',
-  stressed: '🟠',
-};
-
-// ── Generate daily anchor summary from real conversation data ──
+// ── Build daily summary from real conversations ──
 function buildSummaryFromConversations(conversations, userProfile) {
   const userName = userProfile?.preferredName || userProfile?.fullName || 'Resident';
   const meds = userProfile?.medications || [];
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  // Count total messages across all conversations today
-  let totalUserMsgs = 0;
-  let totalRoomiMsgs = 0;
+  let totalUserMsgs = 0, totalRoomiMsgs = 0;
   const scenarios = new Set();
 
   conversations.forEach(conv => {
     scenarios.add(conv.scenario);
     (conv.messages || []).forEach(m => {
-      if (m.sender === 'user') totalUserMsgs++;
-      else totalRoomiMsgs++;
+      if (m.sender === 'user') totalUserMsgs++; else totalRoomiMsgs++;
     });
   });
 
-  // Determine check-in status per time of day from scenarios
-  const hasMorning = scenarios.has('morning');
+  // Extract mood self-rating from evening scenario messages (1-5)
+  let selfRating = null;
+  const eveningConv = conversations.find(c => c.scenario === 'evening');
+  if (eveningConv) {
+    const msgs = eveningConv.messages || [];
+    for (const m of msgs) {
+      if (m.sender === 'user') {
+        const match = m.text?.match(/\b([1-5])\b/);
+        if (match) selfRating = parseInt(match[1]);
+      }
+    }
+  }
+
+  const hasMorning   = scenarios.has('morning');
   const hasMedication = scenarios.has('medication');
   const hasHardMoment = scenarios.has('hard-moment');
-  const hasEvening = scenarios.has('evening');
-  const hasSchedule = scenarios.has('schedule');
+  const hasEvening   = scenarios.has('evening');
+  const hasSchedule  = scenarios.has('schedule');
 
-  // Build check-ins from actual conversation patterns
   const checkIns = {};
-  if (hasMorning || hasMedication) {
-    checkIns.morning = {
-      mood: hasHardMoment ? 'anxious' : 'calm',
-      note: hasMedication
-        ? `${userName} checked in and talked about their morning routine.`
-        : `${userName} started their day with ROOMI.`,
-    };
-  }
-  if (hasSchedule || hasHardMoment) {
-    checkIns.midday = {
-      mood: hasHardMoment ? 'anxious' : 'calm',
-      note: hasHardMoment
-        ? `Had a tough moment today but worked through it with ROOMI.`
-        : `Reviewed the day's plan and stayed on track.`,
-    };
-  }
-  if (hasEvening) {
-    checkIns.evening = {
-      mood: 'content',
-      note: `${userName} reflected on the day with ROOMI.`,
-    };
-  }
+  if (hasMorning || hasMedication) checkIns.morning = {
+    mood: hasHardMoment ? 'anxious' : 'calm',
+    note: hasMedication ? `${userName} checked in and talked about their morning routine.` : `${userName} started their day with ROOMI.`,
+  };
+  if (hasSchedule || hasHardMoment) checkIns.midday = {
+    mood: hasHardMoment ? 'anxious' : 'calm',
+    note: hasHardMoment ? 'Had a tough moment today but worked through it with ROOMI.' : "Reviewed the day's plan and stayed on track.",
+  };
+  if (hasEvening) checkIns.evening = {
+    mood: 'content',
+    note: `${userName} reflected on the day with ROOMI.${selfRating ? ` Rated the day ${selfRating}/5.` : ''}`,
+  };
 
-  // Mood score: base 3, +1 for medication, +1 for no hard moments, cap at 5
-  let moodScore = 3;
-  if (hasMedication) moodScore++;
-  if (!hasHardMoment) moodScore++;
-  moodScore = Math.min(5, moodScore);
+  let moodScore = selfRating ?? 3;
+  if (!selfRating) {
+    if (hasMedication) moodScore++;
+    if (!hasHardMoment) moodScore++;
+    moodScore = Math.min(5, moodScore);
+  }
 
   const moodLabels = { 1: 'Tough day', 2: 'Rough patches', 3: 'Okay day', 4: 'Good day', 5: 'Great day' };
   const moodEmojis = { 1: '😔', 2: '😐', 3: '🙂', 4: '😊', 5: '🥳' };
 
-  // Routine items completed = number of different scenarios used
   const routineItems = scenarios.size;
-  const routineTotal = 5; // 5 possible scenario types
+  const routineTotal = 5;
   const routinePercent = Math.round((routineItems / routineTotal) * 100);
 
   const highlights = [];
-  if (hasMorning) highlights.push('Started the morning with ROOMI');
+  if (hasMorning)    highlights.push('Started the morning with ROOMI');
   if (hasMedication) highlights.push('Discussed medications');
-  if (hasSchedule) highlights.push('Reviewed daily schedule');
-  if (hasEvening) highlights.push('Evening wind-down completed');
+  if (hasSchedule)   highlights.push('Reviewed daily schedule');
+  if (hasEvening)    highlights.push('Evening wind-down completed');
   if (hasHardMoment) highlights.push('Worked through a hard moment');
 
-  // Build quiet flags (contextual notes for caregiver)
   const quietFlags = [];
-  if (hasHardMoment) {
-    quietFlags.push({
-      type: 'note',
-      icon: '📝',
-      text: `${userName} had a hard moment today and used ROOMI for support. They didn't shut down — they reached out.`,
-      color: 'teal',
-    });
-  }
-  if (totalUserMsgs > 15) {
-    quietFlags.push({
-      type: 'positive',
-      icon: '💬',
-      text: `${userName} was especially chatty today (${totalUserMsgs} messages). They seem engaged and comfortable with ROOMI.`,
-      color: 'amber',
-    });
-  }
-  if (totalUserMsgs === 0) {
-    quietFlags.push({
-      type: 'note',
-      icon: '🤫',
-      text: `${userName} hasn't chatted with ROOMI today yet. That's okay — some days are quieter than others.`,
-      color: 'teal',
-    });
-  }
-  if (scenarios.size >= 3) {
-    quietFlags.push({
-      type: 'positive',
-      icon: '🌟',
-      text: `${userName} used ${scenarios.size} different ROOMI features today. That kind of engagement shows real comfort with the routine.`,
-      color: 'amber',
-    });
-  }
-  // Default positive if nothing else
-  if (quietFlags.length === 0) {
-    quietFlags.push({
-      type: 'positive',
-      icon: '🦊',
-      text: `${userName} had a steady day with ROOMI. Consistency is its own kind of progress.`,
-      color: 'amber',
-    });
-  }
+  if (hasHardMoment) quietFlags.push({ type: 'note', icon: '📝', text: `${userName} had a hard moment today and used ROOMI for support. They didn't shut down — they reached out.`, color: 'teal' });
+  if (totalUserMsgs > 15) quietFlags.push({ type: 'positive', icon: '💬', text: `${userName} was especially chatty today (${totalUserMsgs} messages). They seem engaged and comfortable with ROOMI.`, color: 'amber' });
+  if (totalUserMsgs === 0) quietFlags.push({ type: 'note', icon: '🤫', text: `${userName} hasn't chatted with ROOMI today yet. That's okay — some days are quieter than others.`, color: 'teal' });
+  if (scenarios.size >= 3) quietFlags.push({ type: 'positive', icon: '🌟', text: `${userName} used ${scenarios.size} different ROOMI features today. That kind of engagement shows real comfort with the routine.`, color: 'amber' });
+  if (quietFlags.length === 0) quietFlags.push({ type: 'positive', icon: '🦊', text: `${userName} had a steady day with ROOMI. Consistency is its own kind of progress.`, color: 'amber' });
 
   return {
-    date: today,
-    userName,
-    overallMood: moodScore,
-    moodLabel: moodLabels[moodScore],
-    moodEmoji: moodEmojis[moodScore],
-    medicationStatus: {
-      morning: {
-        taken: hasMedication,
-        meds: meds.length > 0
-          ? meds.map(m => `${m.name} ${m.dosage || ''}`.trim())
-          : ['No medications tracked'],
-      },
-    },
-    routineCompletion: {
-      completed: routineItems,
-      total: routineTotal,
-      percentage: routinePercent,
-      highlights: highlights.length > 0 ? highlights : ['No activities logged yet today'],
-    },
-    checkIns: Object.keys(checkIns).length > 0
-      ? checkIns
-      : { morning: { mood: 'calm', note: `${userName} hasn't checked in yet today.` } },
+    date: today, userName, overallMood: moodScore,
+    moodLabel: moodLabels[moodScore], moodEmoji: moodEmojis[moodScore],
+    medicationStatus: { morning: { taken: hasMedication, meds: meds.length > 0 ? meds.map(m => `${m.name} ${m.dosage || ''}`.trim()) : ['No medications tracked'] } },
+    routineCompletion: { completed: routineItems, total: routineTotal, percentage: routinePercent, highlights: highlights.length > 0 ? highlights : ['No activities logged yet today'] },
+    checkIns: Object.keys(checkIns).length > 0 ? checkIns : { morning: { mood: 'calm', note: `${userName} hasn't checked in yet today.` } },
     quietFlags,
-    weeklyTrend: [3, 3, 3, 3, 3, 3, moodScore], // fills with today's score, history will come with Phase 2
+    weeklyTrend: [3, 3, 3, 3, 3, 3, moodScore],
     weekDays: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
     totalMessages: totalUserMsgs + totalRoomiMsgs,
     scenariosUsed: Array.from(scenarios),
@@ -165,128 +103,107 @@ function buildSummaryFromConversations(conversations, userProfile) {
   };
 }
 
-export default function AnchorView({ userId }) {
-  const { user } = useAuth();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+export default function AnchorView({ userId, isCaregiver }) {
+  const [data, setData]               = useState(null);
+  const [loading, setLoading]         = useState(true);
   const [residentName, setResidentName] = useState('Resident');
-  const [residentUid, setResidentUid] = useState(null);
-  const [error, setError] = useState(null);
-  // Phase 2C: Analytics state
+  const [residentUid, setResidentUid]  = useState(null);
+  const [weekHistory, setWeekHistory]  = useState([]);
   const [engagementData, setEngagementData] = useState(null);
-  const [safetyEvents, setSafetyEvents] = useState(null);
-  const [feedbackData, setFeedbackData] = useState(null);
+  const [safetyEvents, setSafetyEvents]     = useState(null);
+  const unsubRef = useRef(null);
 
   useEffect(() => {
     loadAnchorData();
-  }, [userId, user]);
+    return () => { if (unsubRef.current) unsubRef.current(); };
+  }, [userId, isCaregiver]);
 
   async function loadAnchorData() {
     setLoading(true);
-    setError(null);
-
     try {
-      // Determine whose data to show
-      // If caregiver: find their linked resident(s)
-      // If resident: show their own data (self-view)
-      let targetUid = userId || user?.uid;
+      let targetUid = userId;
 
-      if (user?.role === 'caregiver' && user?.uid) {
-        const residents = await getCaregiverResidents(user.uid);
-        if (residents.length > 0) {
-          targetUid = residents[0].uid || residents[0].id;
-        }
+      // Caregivers: find their linked resident
+      if (isCaregiver && userId) {
+        const residents = await getCaregiverResidents(userId);
+        if (residents.length > 0) targetUid = residents[0].uid || residents[0].id;
       }
 
-      if (!targetUid) {
-        // No user — show fallback sample data
-        setData(fallbackData);
-        setLoading(false);
-        return;
-      }
+      if (!targetUid) { setData(fallbackData); setLoading(false); return; }
 
       setResidentUid(targetUid);
-
-      // Load resident profile
       const profile = await getUserProfile(targetUid);
-      if (profile) {
-        setResidentName(profile.preferredName || profile.fullName || 'Resident');
-      }
+      if (profile) setResidentName(profile.preferredName || profile.fullName || 'Resident');
 
-      // Try to load today's saved anchor summary first
-      const savedSummary = await getAnchorSummary(targetUid);
-
-      if (savedSummary && savedSummary.overallMood) {
-        // We have a pre-built summary from today — use it
-        setData(savedSummary);
+      // Try saved summary first
+      const saved = await getAnchorSummary(targetUid);
+      if (saved?.overallMood) {
+        setData(saved);
         setLoading(false);
-        return;
-      }
-
-      // No saved summary — build one from today's conversations
-      const todayConversations = await getConversations(targetUid);
-
-      if (todayConversations.length > 0) {
-        const summary = buildSummaryFromConversations(todayConversations, profile || {});
-        setData(summary);
-
-        // Save it so we don't rebuild every time
-        await saveAnchorSummary(targetUid, summary);
       } else {
-        // No conversations yet today — show "waiting" state with sample structure
-        const emptyDay = buildSummaryFromConversations([], profile || {});
-        setData(emptyDay);
+        // Build from today's conversations
+        const convs = await getConversations(targetUid);
+        const summary = buildSummaryFromConversations(convs, profile || {});
+        setData(summary);
+        if (convs.length > 0) await saveAnchorSummary(targetUid, summary);
+        setLoading(false);
       }
+
+      // Live listener on today's anchor summary
+      if (db) {
+        const today = new Date().toISOString().split('T')[0];
+        const docRef = doc(db, 'anchorSummaries', `${targetUid}_${today}`);
+        if (unsubRef.current) unsubRef.current();
+        unsubRef.current = onSnapshot(docRef, snap => {
+          if (snap.exists()) setData(snap.data());
+        }, () => {});
+      }
+
+      // Load supporting data in background
+      loadSupportingData(targetUid);
+
     } catch (err) {
-      console.error('Error loading anchor data:', err);
-      setError(err.message);
-      setData(fallbackData); // Graceful fallback
-    } finally {
+      console.error('Anchor load error:', err);
+      setData(fallbackData);
       setLoading(false);
     }
-
-    // Phase 2C: Load analytics data in background (non-blocking)
-    loadAnalyticsData(targetUid);
   }
 
-  // ── Phase 2C: Analytics data loading ──
-  async function loadAnalyticsData(uid) {
-    if (!uid) return;
-    const chatApiUrl = import.meta.env.VITE_CHAT_API_URL || 'http://localhost:3001';
-    const hashedId = await hashUserId(uid);
+  async function loadSupportingData(uid) {
+    const [history, engagement, safety] = await Promise.all([
+      getWeeklyAnchorHistory(uid, 7),
+      getFirestoreEngagement(uid, 7),
+      getFirestoreSafetyEvents(uid, 7),
+    ]);
 
-    try {
-      const [analyticsRes, safetyRes, feedbackRes] = await Promise.all([
-        fetch(`${chatApiUrl}/api/admin/analytics?userId=${hashedId}&days=7`).then(r => r.json()).catch(() => null),
-        fetch(`${chatApiUrl}/api/admin/safety-events?userId=${hashedId}&days=7`).then(r => r.json()).catch(() => null),
-        fetch(`${chatApiUrl}/api/admin/feedback?userId=${hashedId}&days=7`).then(r => r.json()).catch(() => null),
-      ]);
-      if (analyticsRes?.analytics) setEngagementData(analyticsRes.analytics);
-      if (safetyRes?.events) setSafetyEvents(safetyRes.events);
-      if (feedbackRes) setFeedbackData(feedbackRes);
-    } catch (err) {
-      console.warn('[analytics] Failed to load (non-critical):', err.message);
+    if (history.length > 0) {
+      setWeekHistory(history);
+      // Patch weeklyTrend with real data
+      const trend = history.map(h => h.overallMood || 3);
+      while (trend.length < 7) trend.unshift(3);
+      setData(prev => prev ? { ...prev, weeklyTrend: trend.slice(-7) } : prev);
     }
+
+    const hasEngagement = engagement.some(d => d.turns > 0);
+    if (hasEngagement) setEngagementData(engagement);
+    setSafetyEvents(safety);
   }
 
-  // ── Render helpers ──
+  // Render helpers
   const renderStars = (count) =>
     Array.from({ length: 5 }, (_, i) => (
       <span key={i} className={`star ${i < count ? 'star--filled' : ''}`}>★</span>
     ));
 
-  const renderMiniChart = (values) => {
-    const max = Math.max(...values);
+  const renderMiniChart = (values, days) => {
+    const max = Math.max(...values, 1);
+    const labels = days || ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     return (
       <div className="mini-chart">
         {values.map((v, i) => (
           <div key={i} className="mini-chart-col">
-            <div
-              className="mini-chart-bar"
-              style={{ height: `${(v / max) * 100}%` }}
-              title={`${data.weekDays[i]}: ${v}/5`}
-            />
-            <span className="mini-chart-label">{data.weekDays[i]}</span>
+            <div className="mini-chart-bar" style={{ height: `${(v / max) * 100}%` }} title={`${labels[i]}: ${v}/5`} />
+            <span className="mini-chart-label">{labels[i]}</span>
           </div>
         ))}
       </div>
@@ -302,13 +219,13 @@ export default function AnchorView({ userId }) {
               <div className="anchor-header-icon">🏠</div>
               <div>
                 <h1 className="anchor-header-title">Anchor View</h1>
-                <p className="anchor-header-sub">Loading today's summary...</p>
+                <p className="anchor-header-sub">Loading today's summary…</p>
               </div>
             </div>
           </div>
           <div className="anchor-trust-banner glass-card" style={{ textAlign: 'center', padding: '40px' }}>
             <div style={{ fontSize: '32px', marginBottom: '12px' }}>🦊</div>
-            <p>Gathering today's data from ROOMI...</p>
+            <p>Gathering today's data from ROOMI…</p>
           </div>
         </div>
       </div>
@@ -320,6 +237,11 @@ export default function AnchorView({ userId }) {
   const displayName = data.userName || residentName;
   const medsTaken = data.medicationStatus?.morning?.taken;
 
+  // Build chart labels from real history dates
+  const chartLabels = weekHistory.length > 0
+    ? weekHistory.map(h => new Date(h.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'narrow' }))
+    : (data.weekDays || ['M', 'T', 'W', 'T', 'F', 'S', 'S']);
+
   return (
     <div className="anchor-page" id="anchor-page">
       <div className="container">
@@ -330,7 +252,7 @@ export default function AnchorView({ userId }) {
             <div className="anchor-header-icon">🏠</div>
             <div>
               <h1 className="anchor-header-title">Anchor View</h1>
-              <p className="anchor-header-sub">{displayName}'s day, in her own words · {data.date}</p>
+              <p className="anchor-header-sub">{displayName}'s day · {data.date}</p>
             </div>
           </div>
           <div className="anchor-badge">
@@ -339,9 +261,9 @@ export default function AnchorView({ userId }) {
           </div>
         </div>
 
-        {/* Data source indicator */}
+        {/* Data source banner */}
         {data.generatedAt && (
-          <div className="anchor-trust-banner glass-card" style={{ borderLeft: '3px solid #059669', background: 'rgba(16, 185, 129, 0.05)' }}>
+          <div className="anchor-trust-banner glass-card" style={{ borderLeft: '3px solid #059669', background: 'rgba(16,185,129,0.05)' }}>
             <span className="anchor-trust-icon">📊</span>
             <p>
               This summary is <strong>generated from real conversations</strong> {displayName} had with ROOMI today.
@@ -355,11 +277,11 @@ export default function AnchorView({ userId }) {
           <span className="anchor-trust-icon">🤝</span>
           <p>
             This view shows daily highlights — <strong>not transcripts, not live monitoring</strong>.
-            {displayName}'s private conversations with ROOMI stay private. You see what she's comfortable sharing.
+            {displayName}'s private conversations with ROOMI stay private. You see what they're comfortable sharing.
           </p>
         </div>
 
-        {/* Quick Stats Bar */}
+        {/* Quick Stats */}
         <div className="anchor-stats-bar glass-card">
           <div className="anchor-stat">
             <span className="anchor-stat-value">{data.routineCompletion.completed}<span className="anchor-stat-denom">/{data.routineCompletion.total}</span></span>
@@ -375,6 +297,11 @@ export default function AnchorView({ userId }) {
             <span className="anchor-stat-value anchor-stat-value--teal">{medsTaken ? '✅' : '—'}</span>
             <span className="anchor-stat-label">{medsTaken ? 'Meds taken' : 'Not tracked'}</span>
           </div>
+          <div className="anchor-stat-divider" />
+          <div className="anchor-stat">
+            <span className="anchor-stat-value">{data.totalMessages || 0}</span>
+            <span className="anchor-stat-label">Messages</span>
+          </div>
         </div>
 
         {/* Main Grid */}
@@ -388,10 +315,12 @@ export default function AnchorView({ userId }) {
             </div>
             <div className="anchor-mood-stars">{renderStars(data.overallMood)}</div>
             <div className="anchor-mood-label">{data.moodLabel}</div>
-            <div className="anchor-mood-note">Based on how {displayName.toLowerCase() === displayName ? displayName : 'they'} said they felt today</div>
+            <div className="anchor-mood-note">
+              {data.scenariosUsed?.includes('evening') ? 'Self-rated by resident' : 'Inferred from conversation patterns'}
+            </div>
           </div>
 
-          {/* Medication */}
+          {/* Medications */}
           <div className="anchor-card glass-card anchor-card--meds">
             <div className="anchor-card-header">
               <h3>Medications</h3>
@@ -424,11 +353,7 @@ export default function AnchorView({ userId }) {
               <div className="anchor-progress-ring">
                 <svg viewBox="0 0 36 36" className="anchor-ring-svg">
                   <path className="anchor-ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  <path
-                    className="anchor-ring-fill"
-                    strokeDasharray={`${data.routineCompletion.percentage}, 100`}
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
+                  <path className="anchor-ring-fill" strokeDasharray={`${data.routineCompletion.percentage}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
                 </svg>
                 <div className="anchor-ring-label">
                   <span className="anchor-ring-pct">{data.routineCompletion.percentage}%</span>
@@ -438,8 +363,7 @@ export default function AnchorView({ userId }) {
               <div className="anchor-routine-highlights">
                 {data.routineCompletion.highlights.map((h, i) => (
                   <div key={i} className="anchor-routine-highlight">
-                    <span className="anchor-routine-check">✓</span>
-                    {h}
+                    <span className="anchor-routine-check">✓</span>{h}
                   </div>
                 ))}
               </div>
@@ -448,9 +372,7 @@ export default function AnchorView({ userId }) {
 
           {/* Check-in Timeline */}
           <div className="anchor-card glass-card anchor-card--checkins">
-            <div className="anchor-card-header">
-              <h3>How Their Day Felt</h3>
-            </div>
+            <div className="anchor-card-header"><h3>How Their Day Felt</h3></div>
             <div className="anchor-timeline">
               {Object.entries(data.checkIns).map(([time, info], i, arr) => (
                 <div key={time} className="anchor-timeline-item">
@@ -459,9 +381,7 @@ export default function AnchorView({ userId }) {
                     {i < arr.length - 1 && <div className="anchor-timeline-line" />}
                   </div>
                   <div className="anchor-timeline-content">
-                    <div className="anchor-timeline-time">
-                      {MOOD_EMOJI[info.mood] || '⚪'} {MOOD_LABELS[time] || time}
-                    </div>
+                    <div className="anchor-timeline-time">{MOOD_EMOJI[info.mood] || '⚪'} {MOOD_LABELS[time] || time}</div>
                     <div className="anchor-timeline-note">{info.note}</div>
                   </div>
                 </div>
@@ -485,56 +405,51 @@ export default function AnchorView({ userId }) {
             </div>
           </div>
 
-          {/* Weekly Trend */}
+          {/* Weekly Trend — real history when available */}
           <div className="anchor-card glass-card anchor-card--trend">
             <div className="anchor-card-header">
               <h3>This Week</h3>
               <span className="anchor-card-status anchor-card-status--good">
-                {data.weeklyTrend[6] >= data.weeklyTrend[0] ? 'Trending up' : 'Steady'}
+                {weekHistory.length > 1 ? `${weekHistory.length} days tracked` : data.weeklyTrend[6] >= data.weeklyTrend[0] ? 'Trending up' : 'Steady'}
               </span>
             </div>
             <div className="anchor-trend-chart">
-              {renderMiniChart(data.weeklyTrend)}
+              {renderMiniChart(data.weeklyTrend, chartLabels)}
             </div>
             <div className="anchor-mood-note" style={{ marginTop: '8px' }}>
-              Mood across the past 7 days, in their own words
+              {weekHistory.length > 1 ? 'Mood scores from actual daily summaries' : 'Mood across the past 7 days'}
             </div>
           </div>
         </div>
 
-        {/* ═══ Phase 2C: Analytics Dashboard ═══ */}
-        {(engagementData || safetyEvents || feedbackData) && (
+        {/* Analytics Dashboard — only shown when Firestore data exists */}
+        {(engagementData || safetyEvents) && (
           <>
             <div className="anchor-analytics-divider">
               <span className="anchor-analytics-divider-text">📊 Analytics Dashboard</span>
             </div>
 
             <div className="anchor-grid">
-              {/* Engagement Chart — 7 day message counts */}
               {engagementData && (
                 <div className="anchor-card glass-card anchor-card--engagement">
                   <div className="anchor-card-header">
                     <h3>7-Day Engagement</h3>
                     <span className="anchor-card-status anchor-card-status--good">
-                      {engagementData.reduce((sum, d) => sum + d.turns, 0)} total turns
+                      {engagementData.reduce((s, d) => s + d.turns, 0)} total turns
                     </span>
                   </div>
                   <div className="anchor-engagement-chart">
                     {engagementData.map((day, i) => {
                       const maxTurns = Math.max(...engagementData.map(d => d.turns), 1);
                       const pct = (day.turns / maxTurns) * 100;
-                      const dateLabel = new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+                      const label = new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
                       return (
                         <div key={i} className="anchor-engagement-col">
                           <div className="anchor-engagement-value">{day.turns}</div>
                           <div className="anchor-engagement-bar-wrapper">
-                            <div
-                              className={`anchor-engagement-bar ${day.turns === 0 ? 'anchor-engagement-bar--empty' : ''}`}
-                              style={{ height: `${Math.max(pct, 4)}%` }}
-                              title={`${day.date}: ${day.turns} turns`}
-                            />
+                            <div className={`anchor-engagement-bar ${day.turns === 0 ? 'anchor-engagement-bar--empty' : ''}`} style={{ height: `${Math.max(pct, 4)}%` }} />
                           </div>
-                          <div className="anchor-engagement-label">{dateLabel}</div>
+                          <div className="anchor-engagement-label">{label}</div>
                         </div>
                       );
                     })}
@@ -542,35 +457,7 @@ export default function AnchorView({ userId }) {
                 </div>
               )}
 
-              {/* Feedback Satisfaction */}
-              {feedbackData && feedbackData.total > 0 && (
-                <div className="anchor-card glass-card anchor-card--feedback">
-                  <div className="anchor-card-header">
-                    <h3>Response Quality</h3>
-                    <span className={`anchor-card-status ${feedbackData.satisfactionRate >= 70 ? 'anchor-card-status--good' : ''}`}>
-                      {feedbackData.satisfactionRate}% positive
-                    </span>
-                  </div>
-                  <div className="anchor-feedback-meter">
-                    <div className="anchor-feedback-bar">
-                      <div
-                        className="anchor-feedback-fill anchor-feedback-fill--up"
-                        style={{ width: `${feedbackData.satisfactionRate}%` }}
-                      />
-                    </div>
-                    <div className="anchor-feedback-labels">
-                      <span>👍 {feedbackData.thumbsUp}</span>
-                      <span>👎 {feedbackData.thumbsDown}</span>
-                    </div>
-                  </div>
-                  <div className="anchor-mood-note" style={{ marginTop: '8px' }}>
-                    Based on {feedbackData.total} ratings over the last 7 days
-                  </div>
-                </div>
-              )}
-
-              {/* Safety Event Log */}
-              {safetyEvents && safetyEvents.length > 0 && (
+              {safetyEvents && safetyEvents.length > 0 ? (
                 <div className="anchor-card glass-card anchor-card--safety">
                   <div className="anchor-card-header">
                     <h3>Safety Interceptions</h3>
@@ -579,24 +466,17 @@ export default function AnchorView({ userId }) {
                   <div className="anchor-safety-list">
                     {safetyEvents.slice(0, 5).map((evt, i) => (
                       <div key={i} className="anchor-safety-item">
-                        <span className={`anchor-safety-layer anchor-safety-layer--${evt.layer}`}>
-                          L{evt.layer}
-                        </span>
+                        <span className={`anchor-safety-layer anchor-safety-layer--${evt.layer}`}>L{evt.layer}</span>
                         <span className="anchor-safety-category">{evt.category}</span>
                         <span className="anchor-safety-time">
-                          {evt.timestamp ? new Date(evt.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                          {evt.timestamp?.toDate ? evt.timestamp.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : evt.date || '—'}
                         </span>
                       </div>
                     ))}
                   </div>
-                  <div className="anchor-mood-note" style={{ marginTop: '8px' }}>
-                    Safety layers preventing harmful content — this is working as designed
-                  </div>
+                  <div className="anchor-mood-note" style={{ marginTop: '8px' }}>Safety layers working as designed</div>
                 </div>
-              )}
-
-              {/* No safety events — positive note */}
-              {safetyEvents && safetyEvents.length === 0 && (
+              ) : safetyEvents && (
                 <div className="anchor-card glass-card anchor-card--safety">
                   <div className="anchor-card-header">
                     <h3>Safety Status</h3>
@@ -604,7 +484,7 @@ export default function AnchorView({ userId }) {
                   </div>
                   <div style={{ textAlign: 'center', padding: '20px 0' }}>
                     <div style={{ fontSize: '32px', marginBottom: '8px' }}>🛡️</div>
-                    <div className="anchor-mood-note">No safety events in the last 7 days — all conversations stayed within safe boundaries.</div>
+                    <div className="anchor-mood-note">No safety events in the last 7 days.</div>
                   </div>
                 </div>
               )}
@@ -612,7 +492,7 @@ export default function AnchorView({ userId }) {
           </>
         )}
 
-        {/* Footer note */}
+        {/* Footer */}
         <div className="anchor-footer-note glass-card">
           <span className="anchor-footer-icon">🦊</span>
           <div>

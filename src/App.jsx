@@ -128,7 +128,7 @@ function AppContent() {
       case 'chat':
         return <ChatInterface key={resetKey} userData={userData} userId={user?.uid} />;
       case 'anchor':
-        return <AnchorView userId={user?.uid} />;
+        return <AnchorView userId={user?.uid} isCaregiver={isCaregiver} />;
       case 'universe':
         return <Universe />;
       case 'hub':
